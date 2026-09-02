@@ -75,9 +75,18 @@ export function OutputBar(props: {
     if (result === null) return;
     track("download", { format: "midi" });
     const a = document.createElement("a");
-    a.href = result.url;
-    a.download = result.filename;
-    a.click();
+    if (notes && notes.length > 0) {
+      const editedBlob = createMidiFile(notes);
+      const url = URL.createObjectURL(editedBlob);
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } else {
+      a.href = result.url;
+      a.download = result.filename;
+      a.click();
+    }
   }
 
   function stem(): string {

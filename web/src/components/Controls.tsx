@@ -57,6 +57,15 @@ export function Controls(props: {
       >
         Follow playhead
       </Button>
+      <Button
+        className="text-content hover:text-white"
+        title="View Feature Guide & Shortcuts"
+        onClick={() => {
+          document.getElementById("help-guide-section")?.scrollIntoView({ behavior: "smooth" });
+        }}
+      >
+        ❓ Help & Features
+      </Button>
       <span
         className="rounded-md border border-line bg-bg px-2.5 py-1 font-mono text-sm tabular-nums text-muted"
         ref={clockRef}

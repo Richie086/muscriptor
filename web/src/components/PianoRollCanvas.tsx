@@ -1,6 +1,6 @@
-import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react";
-import type { AudioEngine } from "../audio";
-import { PianoRoll, KEY_WIDTH } from "../pianoroll";
+import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from "react";
+import { type AudioEngine, INSTRUMENT_ORDER } from "../audio";
+import { PianoRoll, KEY_WIDTH, type RollNote } from "../pianoroll";
 
 export function PianoRollCanvas(props: {
   rollRef: RefObject<PianoRoll | null>;
@@ -10,19 +10,42 @@ export function PianoRollCanvas(props: {
   const { rollRef, audio, setUserScrolled } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const [editTool, setEditTool] = useState<"select" | "add" | "scrub">("select");
+  const [selectedInstrument, setSelectedInstrument] = useState<string>("acoustic_piano");
+  const [selectedNote, setSelectedNote] = useState<RollNote | null>(null);
+
+  const handleDeleteSelected = () => {
+    if (!selectedNote || !rollRef.current) return;
+    rollRef.current.deleteNote(selectedNote);
+    setSelectedNote(null);
+    audio.reloadNotes(rollRef.current.getNotes());
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     const roll = new PianoRoll(canvas);
     rollRef.current = roll;
 
-    // Wheel bindings follow the DAW convention (Ableton / FL / Reaper):
-    //   ctrl/cmd + scroll → zoom the time axis (also what a macOS trackpad
-    //                       pinch fires, so pinch zooms the timeline);
-    //   alt/option + scroll → zoom the pitch axis;
-    //   shift + scroll → pan the time axis;
-    //   plain scroll → vertical wheel pans the pitch axis, horizontal wheel
-    //                  (trackpad) pans time.
-    // (Pitch zoom via the key strip is the click-drag gesture below.)
+    let noteDrag: {
+      note: RollNote;
+      hitArea: "start" | "end" | "body";
+      startX: number;
+      startY: number;
+      origStart: number;
+      origEnd: number;
+      origPitch: number;
+    } | null = null;
+
+    let scrub: { wasPlaying: boolean } | null = null;
+    const scrubTo = (clientX: number) => {
+      const rect = canvas.getBoundingClientRect();
+      const t = clientX < rect.left ? 0 : Math.max(0, roll.xToSeconds(clientX - rect.left));
+      audio.scrubTo(t);
+      roll.setPlayhead(t);
+    };
+
+    let keyDrag: { x: number; y: number } | null = null;
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
@@ -47,51 +70,98 @@ export function PianoRollCanvas(props: {
       setUserScrolled(true);
     };
 
-    // Scrubbing: press-and-drag in the note area moves the playhead live under
-    // the cursor (with follow mode on, the view scrolls along). Playback pauses
-    // for the duration of the drag and resumes from the release point. The
-    // move/up handlers live on the window so the scrub survives the pointer
-    // leaving the canvas — dragging out past the left edge clamps to the start.
-    // A plain click is just a zero-length scrub, so click-to-seek still works.
-    let scrub: { wasPlaying: boolean } | null = null;
-    const scrubTo = (clientX: number) => {
-      const rect = canvas.getBoundingClientRect();
-      // Leaving the canvas on the left means "to the start" — a stationary
-      // cursor gets no more mousemove events, so it could never out-scroll
-      // the view to reach 0 otherwise.
-      const t =
-        clientX < rect.left ? 0 : Math.max(0, roll.xToSeconds(clientX - rect.left));
-      // Clock-only seek per move (a full seek() re-schedules every note); the
-      // rAF loop reads it back into the roll's playhead each frame.
-      audio.scrubTo(t);
-      roll.setPlayhead(t);
-    };
-
-    // Ableton-style key-strip gesture: click-drag on the keyboard zooms the
-    // pitch axis horizontally (drag right = zoom in) and pans it vertically
-    // (grab-style). Anchored on the cursor's pitch.
-    let keyDrag: { x: number; y: number } | null = null;
     const onMouseDown = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
-      if (x >= KEY_WIDTH) {
-        scrub = { wasPlaying: audio.state === "started" };
-        if (scrub.wasPlaying) audio.pause();
-        scrubTo(e.clientX);
-      } else {
-        keyDrag = { x, y: e.clientY - rect.top };
+      const y = e.clientY - rect.top;
+
+      if (x < KEY_WIDTH) {
+        keyDrag = { x, y };
+        e.preventDefault();
+        return;
       }
+
+      const hit = roll.hitTestNote(x, y);
+
+      if (editTool === "add" && !hit) {
+        const pitch = roll.yToPitch(y);
+        const start = roll.xToSeconds(x);
+        const newNote: RollNote = {
+          pitch,
+          start,
+          end: start + 0.25,
+          instrument: selectedInstrument,
+        };
+        roll.addNote(newNote);
+        roll.setSelectedNote(newNote);
+        setSelectedNote({ ...newNote });
+        audio.previewPitch(newNote.instrument, newNote.pitch);
+        audio.reloadNotes(roll.getNotes());
+        e.preventDefault();
+        return;
+      }
+
+      if (hit && editTool !== "scrub") {
+        roll.setSelectedNote(hit.note);
+        setSelectedNote({ ...hit.note });
+        audio.previewPitch(hit.note.instrument, hit.note.pitch);
+
+        noteDrag = {
+          note: hit.note,
+          hitArea: hit.hitArea,
+          startX: e.clientX,
+          startY: e.clientY,
+          origStart: hit.note.start,
+          origEnd: hit.note.end,
+          origPitch: hit.note.pitch,
+        };
+        e.preventDefault();
+        return;
+      }
+
+      // Deselect note if clicked empty space
+      roll.setSelectedNote(null);
+      setSelectedNote(null);
+
+      scrub = { wasPlaying: audio.state === "started" };
+      if (scrub.wasPlaying) audio.pause();
+      scrubTo(e.clientX);
       e.preventDefault();
     };
+
     const onMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (noteDrag) {
+        const dx = e.clientX - noteDrag.startX;
+        const dt = dx / roll.pxPerSec;
+
+        if (noteDrag.hitArea === "body") {
+          const newPitch = roll.yToPitch(y);
+          if (newPitch !== noteDrag.note.pitch) {
+            noteDrag.note.pitch = newPitch;
+            audio.previewPitch(noteDrag.note.instrument, newPitch);
+          }
+          const dur = noteDrag.origEnd - noteDrag.origStart;
+          noteDrag.note.start = Math.max(0, noteDrag.origStart + dt);
+          noteDrag.note.end = noteDrag.note.start + dur;
+        } else if (noteDrag.hitArea === "start") {
+          noteDrag.note.start = Math.max(0, Math.min(noteDrag.origEnd - 0.05, noteDrag.origStart + dt));
+        } else if (noteDrag.hitArea === "end") {
+          noteDrag.note.end = Math.max(noteDrag.note.start + 0.05, noteDrag.origEnd + dt);
+        }
+        setSelectedNote({ ...noteDrag.note });
+        return;
+      }
+
       if (scrub) {
         scrubTo(e.clientX);
         return;
       }
-      const rect = canvas.getBoundingClientRect();
+
       if (keyDrag) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
         const dx = x - keyDrag.x;
         const dy = y - keyDrag.y;
         if (dx !== 0) roll.zoomPitch(Math.exp(dx * 0.01), y);
@@ -100,14 +170,27 @@ export function PianoRollCanvas(props: {
         setUserScrolled(true);
         return;
       }
-      // Hint the gesture with a resize cursor while hovering the key strip.
-      canvas.style.cursor =
-        e.clientX - rect.left < KEY_WIDTH ? "ew-resize" : "default";
+
+      if (x < KEY_WIDTH) {
+        canvas.style.cursor = "ew-resize";
+      } else {
+        const hit = roll.hitTestNote(x, y);
+        if (hit) {
+          canvas.style.cursor = hit.hitArea === "body" ? "grab" : "ew-resize";
+        } else if (editTool === "add") {
+          canvas.style.cursor = "crosshair";
+        } else {
+          canvas.style.cursor = "default";
+        }
+      }
     };
+
     const onMouseUp = () => {
+      if (noteDrag) {
+        audio.reloadNotes(roll.getNotes());
+        noteDrag = null;
+      }
       if (scrub) {
-        // One real seek to rebuild the (one-shot) note schedule from the
-        // release point, then resume if the drag interrupted playback.
         audio.seek(audio.seconds);
         if (scrub.wasPlaying) audio.play();
         scrub = null;
@@ -115,9 +198,21 @@ export function PianoRollCanvas(props: {
       keyDrag = null;
     };
 
-    // Touch: one finger drags the view (left/right scrolls time, up/down pans
-    // the pitch axis when zoomed); two fingers pinch to zoom — horizontal
-    // spread zooms time, vertical spread zooms the pitch axis.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const sel = roll.getSelectedNote();
+        if (sel) {
+          e.preventDefault();
+          roll.deleteNote(sel);
+          setSelectedNote(null);
+          audio.reloadNotes(roll.getNotes());
+        }
+      } else if (e.key === "Escape") {
+        roll.setSelectedNote(null);
+        setSelectedNote(null);
+      }
+    };
+
     let pan: { x: number; y: number } | null = null;
     let pinch: { dx: number; dy: number } | null = null;
     const pinchSpan = (t: TouchList) => ({
@@ -142,7 +237,7 @@ export function PianoRollCanvas(props: {
         const span = pinchSpan(e.touches);
         const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
         const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-        const MIN = 12; // ignore tiny spans where the ratio gets noisy
+        const MIN = 12;
         if (pinch.dx > MIN && span.dx > MIN) roll.zoomTime(span.dx / pinch.dx, cx);
         if (pinch.dy > MIN && span.dy > MIN) roll.zoomPitch(span.dy / pinch.dy, cy);
         pinch = span;
@@ -169,6 +264,8 @@ export function PianoRollCanvas(props: {
     canvas.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("keydown", onKeyDown);
+
     return () => {
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("touchstart", onTouchStart);
@@ -177,11 +274,84 @@ export function PianoRollCanvas(props: {
       canvas.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("keydown", onKeyDown);
     };
-  }, [audio, rollRef, setUserScrolled]);
+  }, [audio, editTool, rollRef, selectedInstrument, setUserScrolled]);
 
   return (
     <section className="relative col-start-1 overflow-hidden rounded-card border border-line bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_60px),#0a0b0e] p-0 shadow-canvas animate-rise [animation-delay:0.12s]">
+      {/* Piano Roll Edit Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-[#12141a] px-4 py-2 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-muted">Mode:</span>
+          <button
+            type="button"
+            onClick={() => setEditTool("select")}
+            className={`rounded px-2.5 py-1 font-medium transition ${
+              editTool === "select"
+                ? "bg-accent text-white shadow-sm"
+                : "bg-surface text-muted hover:text-white"
+            }`}
+          >
+            ✏️ Select & Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditTool("add")}
+            className={`rounded px-2.5 py-1 font-medium transition ${
+              editTool === "add"
+                ? "bg-accent text-white shadow-sm"
+                : "bg-surface text-muted hover:text-white"
+            }`}
+          >
+            ➕ Add Note
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditTool("scrub")}
+            className={`rounded px-2.5 py-1 font-medium transition ${
+              editTool === "scrub"
+                ? "bg-accent text-white shadow-sm"
+                : "bg-surface text-muted hover:text-white"
+            }`}
+          >
+            📍 Scrub
+          </button>
+        </div>
+
+        {editTool === "add" && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted">Instrument:</span>
+            <select
+              value={selectedInstrument}
+              onChange={(e) => setSelectedInstrument(e.target.value)}
+              className="rounded border border-line bg-surface px-2 py-1 text-content focus:border-accent focus:outline-none"
+            >
+              {INSTRUMENT_ORDER.map((name: string) => (
+                <option key={name} value={name}>
+                  {name.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {selectedNote && (
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-content">
+              Pitch {selectedNote.pitch} | {selectedNote.start.toFixed(2)}s – {selectedNote.end.toFixed(2)}s
+            </span>
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              className="rounded bg-rose-600/80 px-2 py-1 font-medium text-white hover:bg-rose-500"
+            >
+              🗑️ Delete Note
+            </button>
+          </div>
+        )}
+      </div>
+
       <canvas className="block h-[420px] w-full" width={1200} height={400} ref={canvasRef} />
     </section>
   );
