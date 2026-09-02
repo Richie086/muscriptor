@@ -32,6 +32,27 @@
 
 ---
 
+## ⚡ Key Enhancements vs Upstream
+
+This repository (`Richie086/muscriptor`) includes several core improvements over the original Kyutai base repository:
+
+1. **Pure-Python Audio Processing Fallback**:
+   - **Upstream**: Required native system dependencies (`fluidsynth`) to process audio soundfonts and auralizations.
+   - **This Project**: Implements a pure-Python additive synthesizer fallback (`muscriptor/utils/auralization.py` & `muscriptor/utils/audio.py`) using `scipy`/`numpy` harmonic synthesis. Transcription and audio playback run smoothly even in constrained environments without native libraries.
+
+2. **Interactive Export Hub & Client-Side MIDI Encoding**:
+   - **Upstream**: Basic inline export buttons in the output bar.
+   - **This Project**: Adds a comprehensive **Export Hub** modal interface (`ExportDialog.tsx`) and a custom client-side **`midiEncoder.ts`** that serializes live piano-roll notes into multi-track Standard MIDI (`.mid`) files directly in the browser.
+
+3. **Enhanced Piano Roll UI & Controls**:
+   - **Upstream**: Standard stem toggles and basic score triggers.
+   - **This Project**: Improved instrument track selection, note interaction handlers (`pianoroll.ts`), and streamlined sheet music engraving actions.
+
+4. **Project Management & CI/CD Tracking**:
+   - Tracked via dedicated **GitHub Project Board #5** ([MuScriptor Development Board](https://github.com/users/Richie086/projects/5)) with feature branching and mandatory Pull Request code reviews.
+
+---
+
 ## 🚀 Quickstart & Local Servers
 
 ### Prerequisites
