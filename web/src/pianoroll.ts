@@ -362,8 +362,84 @@ export class PianoRoll {
     else this.mutedInstruments.delete(instrument);
   }
 
+  private selectedNote: RollNote | null = null;
+
+  getSelectedNote(): RollNote | null {
+    return this.selectedNote;
+  }
+
+  setSelectedNote(note: RollNote | null) {
+    this.selectedNote = note;
+  }
+
+  deleteNote(note: RollNote) {
+    const idx = this.notes.indexOf(note);
+    if (idx !== -1) {
+      this.notes.splice(idx, 1);
+      if (this.selectedNote === note) {
+        this.selectedNote = null;
+      }
+    }
+  }
+
+  yToPitch(y: number): number {
+    const H = this.canvas.getBoundingClientRect().height;
+    const rowH = this.pxPerPitch ?? H / DEFAULT_PITCH_RANGE;
+    const pitchTop = this.pxPerPitch === null ? DEFAULT_PITCH_TOP : this.pitchTop;
+    const p = Math.floor(pitchTop - y / rowH);
+    return Math.max(PITCH_MIN, Math.min(PITCH_MAX, p));
+  }
+
+  pitchToY(pitch: number): number {
+    const H = this.canvas.getBoundingClientRect().height;
+    const rowH = this.pxPerPitch ?? H / DEFAULT_PITCH_RANGE;
+    const pitchTop = this.pxPerPitch === null ? DEFAULT_PITCH_TOP : this.pitchTop;
+    return (pitchTop - pitch) * rowH;
+  }
+
+  hitTestNote(
+    x: number,
+    y: number,
+  ): { note: RollNote; hitArea: "start" | "end" | "body" } | null {
+    if (x < KEY_WIDTH) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    const H = rect.height;
+    const rowH = this.pxPerPitch ?? H / DEFAULT_PITCH_RANGE;
+    const pitchTop = this.pxPerPitch === null ? DEFAULT_PITCH_TOP : this.pitchTop;
+
+    // Search in reverse order so topmost (last drawn) notes are hit-tested first
+    for (let i = this.notes.length - 1; i >= 0; i--) {
+      const n = this.notes[i];
+      if (n.pitch < PITCH_MIN || n.pitch > PITCH_MAX) continue;
+      if (this.hiddenInstruments.has(n.instrument)) continue;
+
+      const shift = Math.min((n.stackOffset ?? 0) * NOTE_STACK_PX, 3);
+      const noteY = (pitchTop - n.pitch) * rowH - shift;
+      if (y < noteY - 1 || y > noteY + Math.max(4, rowH) + 1) continue;
+
+      const noteX0 = KEY_WIDTH + (n.start - this.lastOffset) * this._pxPerSec;
+      const fullW = Math.max(4, (n.end - n.start) * this._pxPerSec - NOTE_GAP_PX);
+      const noteX1 = noteX0 + fullW;
+
+      const edgeTol = Math.min(6, fullW / 3);
+      if (x >= noteX0 - 4 && x <= noteX1 + 4) {
+        if (Math.abs(x - noteX0) <= edgeTol) {
+          return { note: n, hitArea: "start" };
+        }
+        if (Math.abs(x - noteX1) <= edgeTol) {
+          return { note: n, hitArea: "end" };
+        }
+        if (x >= noteX0 && x <= noteX1) {
+          return { note: n, hitArea: "body" };
+        }
+      }
+    }
+    return null;
+  }
+
   clear() {
     this.notes = [];
+    this.selectedNote = null;
     this.hiddenInstruments.clear();
     // Unmounting the instrument list mid-hover fires no mouseleave, so drop
     // any stale spotlight here.
@@ -712,6 +788,18 @@ export class PianoRoll {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = instrumentColor(n.instrument);
       ctx.fillRect(x, y, w, Math.max(2, rowH - rowGap));
+
+      if (n === this.selectedNote) {
+        const noteH = Math.max(2, rowH - rowGap);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - 1, y - 1, w + 2, noteH + 2);
+
+        // Edge grips for start & end duration trimming
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x - 2, y, 4, noteH);
+        ctx.fillRect(x + w - 2, y, 4, noteH);
+      }
     }
     ctx.globalAlpha = 1;
 

@@ -444,6 +444,22 @@ export class AudioEngine {
     return this.wavBuffer?.duration ?? 0;
   }
 
+  /** Play a short preview of a single pitch for audio editing feedback. */
+  previewPitch(instrument: string, pitch: number, duration = 0.25) {
+    if (!this.synth) return;
+    const ch = this.channelFor(instrument);
+    this.synth.noteOn(ch, pitch, NOTE_VELOCITY);
+    setTimeout(() => {
+      this.synth?.noteOff(ch, pitch);
+    }, duration * 1000);
+  }
+
+  /** Reload note list after user edits and re-sync transport schedule. */
+  reloadNotes(notes: NoteOpts[]) {
+    this.allNotes = notes.map((n) => ({ ...n }));
+    this.seek(this.seconds);
+  }
+
   get state(): "started" | "stopped" | "paused" {
     return Tone.getTransport().state;
   }

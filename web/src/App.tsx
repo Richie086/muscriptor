@@ -18,6 +18,7 @@ import { Footer, PartnerLogos } from "./components/Footer";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { Faq } from "./components/Faq";
+import { HelpGuide } from "./components/HelpGuide";
 import { track } from "./analytics";
 
 /**
@@ -404,6 +405,7 @@ export function App() {
             setError={setError}
           />
           <Faq />
+          <HelpGuide />
         </>
       ) : (
         <main className="mx-auto grid max-w-7xl grid-cols-[1fr_300px] gap-4 px-7 pb-12 pt-2 max-[760px]:grid-cols-1">
@@ -475,6 +477,10 @@ export function App() {
               onClose={() => setExportHubOpen(false)}
             />
           )}
+
+          <div id="help-guide-section" className="col-span-full mt-4">
+            <HelpGuide />
+          </div>
         </main>
       )}
 
