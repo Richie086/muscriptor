@@ -25,7 +25,7 @@
 ### ✨ Key Features
 
 - **Multi-Instrument Audio Transcription**: Separates and transcribes pitch, duration, and onset timings for multiple instruments simultaneously.
-- **Native MP3 & Multi-Format Audio Support**: Built-in support for MP3, WAV, FLAC, and OGG files with automatic non-WAV decoding fallback (`_read_non_wav_file`).
+- **Expanded Audio & Video Container Support**: Built-in support for MP4, M4A, AAC, WEBM, MOV, OGG, FLAC, MP3, and WAV files with automatic multi-backend decoding (`_read_non_wav_file`).
 - **Interactive Web UI**: Real-time piano-roll rendering, audio playback, stem controls, and track isolation.
 - **Pure-Python Audio Fallback**: Robust handling for standard and custom audio formats even in restricted environments without native SoundFont binaries.
 - **Sheet Music & Tablature Engraving**: Generates quantized MusicXML, full score PDFs, and instrument tablatures using MuseScore 4.
@@ -37,9 +37,9 @@
 
 This repository (`Richie086/muscriptor`) includes several core improvements over the original Kyutai base repository:
 
-1. **Native MP3 & Non-WAV Audio Processing**:
+1. **Expanded Audio & Video Container Ingestion**:
    - **Upstream**: Primary support focused on WAV audio formats with errors on certain MP3/compressed streams in restrictive environments.
-   - **This Project**: Added robust MP3 file ingestion, stream decoding, and filename preservation via `_read_non_wav_file` in `muscriptor/utils/audio.py` and `muscriptor/server.py`.
+   - **This Project**: Added support for MP4, M4A, AAC, WEBM, OGG, FLAC, MP3, and WAV files with PyAV, soundfile, ffmpeg CLI, and torchaudio stream extraction via `_read_non_wav_file` in `muscriptor/utils/audio.py`.
 
 2. **Pure-Python Audio Processing Fallback**:
    - **Upstream**: Required native system dependencies (`fluidsynth`) to process audio soundfonts and auralizations.
