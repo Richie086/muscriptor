@@ -34,6 +34,32 @@ export function HelpGuide() {
       ),
     },
     {
+      id: "quantization",
+      title: "⏱️ Live Quantization & Grid Snap Controls",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Align notes automatically to musical subdivisions with interactive grid snap controls:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>Selectable Grid Divisions:</strong> Choose from <code className="text-accent">1/4</code>, <code className="text-accent">1/8</code>, <code className="text-accent">1/16</code>, <code className="text-accent">1/32</code>, or triplet subdivisions (<code className="text-accent">1/8t</code>, <code className="text-accent">1/16t</code>).
+            </li>
+            <li>
+              <strong>Live Drag Snapping:</strong> When grid snap is active, moving note start/end boundaries automatically snaps to the nearest grid step.
+            </li>
+            <li>
+              <strong>Visual Grid Lines:</strong> Dynamic accent grid lines render over the canvas to visualize note alignment.
+            </li>
+            <li>
+              <strong>Batch Quantization:</strong> Click <strong>✨ Quantize All</strong> to instantly snap the entire transcription to the chosen BPM and grid division.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
       id: "exporthub",
       title: "💾 Client-Side MIDI Serialization & Export Hub",
       badge: "NEW",
