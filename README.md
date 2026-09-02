@@ -1,205 +1,170 @@
 <p align="center">
-  <img src="web/logo_muscriptor_final.png" alt="MuScriptor logo" width="300">
+  <img src="web/logo_muscriptor_final.png" alt="MuScriptor logo" width="320">
 </p>
 
-# MuScriptor
+<h1 align="center">MuScriptor</h1>
 
-MuScriptor is a multi-instrument music transcription model developed by [Kyutai](https://kyutai.org) and [Mirelo](https://www.mirelo.ai).
-It turns a recording into MIDI and into sheet music.
-It's the most accurate open-source transcription model.
-You can use the model [here](https://muscriptor.kyutai.org) or self-host it using this repository.
-
-
-[Use it](https://muscriptor.kyutai.org) | [Paper](https://arxiv.org/abs/2607.08168v1) | [HuggingFace](https://huggingface.co/MuScriptor)
-
-<!-- TODO: record the demo GIF (web UI piano roll), save it as assets/demo.gif,
-     then uncomment:
 <p align="center">
-  <img src="assets/demo.gif" alt="MuScriptor web UI: live piano roll while transcribing" width="700">
+  <strong>Multi-Instrument Music Transcription to MIDI and Sheet Music</strong>
 </p>
--->
 
-## HuggingFace login (required)
+<p align="center">
+  <a href="https://github.com/Richie086/muscriptor"><img src="https://img.shields.io/badge/GitHub-Repository-blue?logo=github" alt="GitHub Repo"></a>
+  <a href="https://github.com/Richie086/muscriptor/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
+  <a href="https://huggingface.co/MuScriptor"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-MuScriptor-yellow" alt="HuggingFace"></a>
+  <a href="https://pypi.org/project/muscriptor/"><img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python Version"></a>
+  <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Frontend-React%20%7C%20Vite-646CFF?logo=vite&logoColor=white" alt="Vite"></a>
+</p>
 
-To use MuScriptor locally, you first need to log into [HuggingFace](https://huggingface.co/MuScriptor)
-and accept the CC BY-NC 4.0 license.
+---
 
-1. Accept the model license on the model page for the [small](https://huggingface.co/MuScriptor/muscriptor-small),
-   [medium](https://huggingface.co/MuScriptor/muscriptor-medium) or [large](https://huggingface.co/MuScriptor/muscriptor-large) model
-   (access is granted automatically).
-2. Authenticate on your machine:
+## 🎵 Overview
 
-   ```bash
-   uvx hf auth login
-   ```
+**MuScriptor** is a state-of-the-art open-source multi-instrument music transcription system developed by [Kyutai](https://kyutai.org) and [Mirelo](https://www.mirelo.ai). It analyzes audio recordings (MP3, WAV, FLAC, OGG) and transcribes them into high-accuracy multi-track MIDI, interactive piano-roll visualizations, and engraved sheet music (MusicXML/PDF).
 
-   or set a token (create one at
-   [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)):
+### ✨ Key Features
 
-   ```bash
-   export HF_TOKEN=hf_...
-   ```
+- **Multi-Instrument Audio Transcription**: Separates and transcribes pitch, duration, and onset timings for multiple instruments simultaneously.
+- **Interactive Web UI**: Real-time piano-roll rendering, audio playback, stem controls, and track isolation.
+- **Pure-Python Audio Fallback**: Robust handling for standard and custom audio formats even in restricted environments.
+- **Sheet Music & Tablature Engraving**: Generates quantized MusicXML, full score PDFs, and instrument tablatures using MuseScore 4.
+- **Flexible Deployment**: Supports local Web UI hosting, CLI execution, and integration into Python applications.
 
-The weights are then automatically downloaded on first use and cached locally.
+---
 
-## Try it locally
+## 🚀 Quickstart & Local Servers
 
-After Hugging Face authentication, you can use MuScriptor with `uvx` without having to clone this repo.
+### Prerequisites
 
-Some platforms need an extra `uvx` flag, on every `uvx muscriptor` command:
+- **Python**: `3.10` or newer
+- **uv**: Installed via `curl -sSf https://astral.sh/uv/install.sh` or pip
+- **Node.js & pnpm**: `Node.js >= 18` and `pnpm >= 9`
+- **MuseScore 4** *(Optional for PDF sheet music output)*: Download from [musescore.org](https://musescore.org)
 
-| Platform | Command |
-|---|---|
-| Linux, macOS with Apple Silicon | `uvx muscriptor serve` |
-| Windows (to use the GPU) | `uvx --torch-backend=cu128 muscriptor serve` |
-| macOS with Intel | `uvx --python 3.12 muscriptor serve` |
+### 1. Web UI & Production Backend Server
 
-On Windows the default PyTorch backend is `cpu`, so the GPU needs
-`--torch-backend=cu128`. On Intel Macs, PyTorch stopped shipping x86_64 wheels
-after torch 2.2.2, which supports Python ≤ 3.12, so the Python version has to
-be pinned (if you install with pip/uv instead, use Python 3.10–3.12).
-
-## Web UI
-
-You can host the web UI locally with:
+To start the integrated server hosting both the web client and the FastAPI backend:
 
 ```bash
-uvx muscriptor serve
+uv run muscriptor serve --port 8222
 ```
 
-This gives you the same UI as hosted on https://muscriptor.kyutai.org/, just with a different look.
+* **Local Output URL**: [http://127.0.0.1:8222](http://127.0.0.1:8222)
 
-The sheet music download needs **MuseScore 4 or newer** installed separately (see
-[Sheet music](#sheet-music) below). Without it, everything except that download still works.
+### 2. Frontend Hot-Reloading Development Server
 
-## Command-line interface (CLI)
-
-```bash
-uvx muscriptor transcribe path/to/audio_file.wav
-```
-
-See `--help` for all the options.
-
-### Sheet music
-
-Using the CLI with `--format sheets` engraves the transcription as readable notation instead of
-writing a single MIDI file.
-
-```bash
-muscriptor transcribe audio.wav --format sheets --output score/
-```
-
-The output structure looks like this:
-
-```
-score/
-├── score.mid                       the transcription, as quantized MIDI
-├── score.musicxml                  the engraved score, as MusicXML
-├── full_score.pdf                  every instrument on one system
-├── 01_electric_guitar.pdf          one PDF per instrument …
-├── 01_electric_guitar_tab.pdf      … and a tablature PDF for fretted ones
-├── 02_electric_bass.pdf
-├── 02_electric_bass_tab.pdf
-└── 03_drum_kit.pdf
-```
-
-This needs **MuseScore 4 or newer** installed separately. Downloads for every
-platform are at [musescore.org/en/download](https://musescore.org/en/download).
-Set `$MUSCRIPTOR_MUSESCORE` if it lives somewhere unusual.
-
-It works best if there is a steady tempo (i.e. playing with a metronome), because
-that allows us to quantize the notes (snap them to a grid) for a cleaner transcription.
-Rubato recordings will work significantly worse.
-
-## Using from Python
-
-MuScriptor is also on PyPI, so you can install it with with uv (recommended) or with pip:
-
-```bash
-uv add muscriptor
-```
-
-```bash
-pip install muscriptor
-```
-
-Ask your coding agent to show you around the codebase.
-
-## Models
-
-Three variants are published under the [MuScriptor](https://huggingface.co/MuScriptor)
-HuggingFace organization. Everywhere a model is selected (`load_model()`, the
-CLI's `--model`, `serve --model`) you can pass the bare size keyword and the
-weights are downloaded and cached automatically. The architecture is a transformer decoder only. Here are the detailed model sizes:
-
-| Variant | Parameters | Layers | Dim | HuggingFace repo |
-|---|---|---|---|---|
-| `small` | 103M | 14 | 768 | [muscriptor-small](https://huggingface.co/MuScriptor/muscriptor-small) |
-| `medium` (default) | 307M | 24 | 1024 | [muscriptor-medium](https://huggingface.co/MuScriptor/muscriptor-medium) |
-| `large` | 1.4B | 48 | 1536 | [muscriptor-large](https://huggingface.co/MuScriptor/muscriptor-large) |
-
-`small` is the practical choice on CPU-only machines, `medium` is the default
-speed/accuracy trade-off, and `large` is the most accurate but really wants a
-GPU. On Apple Silicon the model runs on Metal (MPS) automatically.
-
-## Developing
-
-To set up for development, get [uv](https://docs.astral.sh/uv/getting-started/installation/),
-clone this repo and run:
-```bash
-uv sync
-```
-
-For the web UI, you also need [pnpm](https://pnpm.io/installation) and Node
-(can be installed [via pnpm](https://pnpm.io/cli/runtime)).
-Then run:
+If you are modifying the React frontend:
 
 ```bash
 cd web
-pnpm install
-pnpm run build
+npx pnpm install
+npx pnpm dev
 ```
 
-If you're not editing the frontend, you only need to do this once.
-If you are, run `pnpm dev` instead for a hot-reloading dev server.
-Start the backend alongside it with it using `uv run muscriptor serve --port 8222`
-and then open the frontend on http://localhost:5173/.
+* **Local Dev URL**: [http://localhost:5173](http://localhost:5173)
 
-### Run
+---
 
-After this setup, you can run Muscriptor from your local repository using
-`uv` (note - not `uvx` like before):
+## 🛠️ Local Build Instructions
+
+### Building the Web Frontend
+
+Compile TypeScript and bundle static production assets into `muscriptor/web_dist/`:
 
 ```bash
-uv run muscriptor serve
-# or 
-uv run muscriptor transcribe path/to/audio_file.wav
+cd web
+npx pnpm run build
 ```
 
-Again, see `--help` for more options.
+### Building Python Wheel & Source Packages
 
-## License
+Build local distribution packages (includes bundled `web_dist` assets):
 
-The code in this repository is released under the [MIT license](LICENSE).
-
-The model weights, published on
-[HuggingFace](https://huggingface.co/MuScriptor), are released under the
-[CC BY-NC 4.0 license](https://creativecommons.org/licenses/by-nc/4.0/)
-(non-commercial use).
-
-The MuseScore General SoundFont downloaded for playback is
-distributed under its own (MIT) license.
-
-## Citation
-
-```bibtex
-@misc{rouard2026muscriptoropenmodelmultiinstrument,
-      title={MuScriptor: An Open Model for Multi-Instrument Music Transcription}, 
-      author={Simon Rouard and Michael Krause and Axel Roebel and Carl-Johann Simon-Gabriel and Alexandre Défossez},
-      year={2026},
-      eprint={2607.08168},
-      archivePrefix={arXiv},
-      primaryClass={cs.SD},
-      url={https://arxiv.org/abs/2607.08168}, 
-}
+```bash
+uv build
 ```
+
+The output artifacts will be saved in `dist/`:
+- `dist/muscriptor-0.3.0-py3-none-any.whl`
+- `dist/muscriptor-0.3.0.tar.gz`
+
+---
+
+## 💻 Command-Line Interface (CLI)
+
+### Transcribe to MIDI
+
+```bash
+uv run muscriptor transcribe path/to/song.wav
+```
+
+### Transcribe to Sheet Music (PDF & MusicXML)
+
+```bash
+uv run muscriptor transcribe path/to/song.wav --format sheets --output score/
+```
+
+**Output Structure:**
+```
+score/
+├── score.mid                       # Quantized multi-track MIDI
+├── score.musicxml                  # Engraved score as MusicXML
+├── full_score.pdf                  # Full ensemble score PDF
+├── 01_electric_guitar.pdf          # Individual instrument score
+└── 01_electric_guitar_tab.pdf      # Tablature PDF
+```
+
+---
+
+## 📊 Model Variants
+
+MuScriptor model weights are hosted under the [MuScriptor HuggingFace Organization](https://huggingface.co/MuScriptor).
+
+| Variant | Parameters | Layers | Hidden Dim | Recommended Environment |
+|---|---|---|---|---|
+| `small` | 103M | 14 | 768 | CPU-only / Laptops |
+| `medium` *(Default)* | 307M | 24 | 1024 | Apple Silicon / Standard GPU |
+| `large` | 1.4B | 48 | 1536 | High-end NVIDIA GPU |
+
+Before first use, log into HuggingFace:
+```bash
+uvx hf auth login
+# or set environment variable
+export HF_TOKEN=hf_...
+```
+
+---
+
+## 📂 Project Architecture
+
+```
+muscriptor/
+├── muscriptor/                     # Python Core & Server Package
+│   ├── server.py                   # FastAPI SSE stream & HTTP routes
+│   ├── model.py                    # Transformer transcription pipeline
+│   ├── utils/                      # Audio loading, auralization & MIDI helpers
+│   └── web_dist/                   # Built production frontend static assets
+├── web/                            # React + TypeScript + Vite Frontend
+│   ├── src/
+│   │   ├── components/             # PianoRoll, Controls, ExportDialog, OutputBar
+│   │   ├── hooks/                  # Transcription state & SSE stream handler
+│   │   └── App.tsx                 # Main UI entrypoint
+│   ├── package.json
+│   └── vite.config.ts
+├── dist/                           # Built Python wheel & sdist packages
+├── pyproject.toml                  # Python package configuration (Hatchling)
+└── README.md                       # Documentation
+```
+
+---
+
+## 📄 License
+
+- **Code**: Released under the [MIT License](LICENSE).
+- **Model Weights**: Released under [CC BY-NC 4.0 License](https://creativecommons.org/licenses/by-nc/4.0/).
+
+---
+
+<p align="center">
+  Maintained by <a href="https://github.com/Richie086">Richie086</a> &bull; Project Board: <a href="https://github.com/users/Richie086/projects/5">MuScriptor Board</a>
+</p>
