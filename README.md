@@ -25,8 +25,9 @@
 ### ✨ Key Features
 
 - **Multi-Instrument Audio Transcription**: Separates and transcribes pitch, duration, and onset timings for multiple instruments simultaneously.
+- **Native MP3 & Multi-Format Audio Support**: Built-in support for MP3, WAV, FLAC, and OGG files with automatic non-WAV decoding fallback (`_read_non_wav_file`).
 - **Interactive Web UI**: Real-time piano-roll rendering, audio playback, stem controls, and track isolation.
-- **Pure-Python Audio Fallback**: Robust handling for standard and custom audio formats even in restricted environments.
+- **Pure-Python Audio Fallback**: Robust handling for standard and custom audio formats even in restricted environments without native SoundFont binaries.
 - **Sheet Music & Tablature Engraving**: Generates quantized MusicXML, full score PDFs, and instrument tablatures using MuseScore 4.
 - **Flexible Deployment**: Supports local Web UI hosting, CLI execution, and integration into Python applications.
 
@@ -36,19 +37,23 @@
 
 This repository (`Richie086/muscriptor`) includes several core improvements over the original Kyutai base repository:
 
-1. **Pure-Python Audio Processing Fallback**:
+1. **Native MP3 & Non-WAV Audio Processing**:
+   - **Upstream**: Primary support focused on WAV audio formats with errors on certain MP3/compressed streams in restrictive environments.
+   - **This Project**: Added robust MP3 file ingestion, stream decoding, and filename preservation via `_read_non_wav_file` in `muscriptor/utils/audio.py` and `muscriptor/server.py`.
+
+2. **Pure-Python Audio Processing Fallback**:
    - **Upstream**: Required native system dependencies (`fluidsynth`) to process audio soundfonts and auralizations.
    - **This Project**: Implements a pure-Python additive synthesizer fallback (`muscriptor/utils/auralization.py` & `muscriptor/utils/audio.py`) using `scipy`/`numpy` harmonic synthesis. Transcription and audio playback run smoothly even in constrained environments without native libraries.
 
-2. **Interactive Export Hub & Client-Side MIDI Encoding**:
+3. **Interactive Export Hub & Client-Side MIDI Encoding**:
    - **Upstream**: Basic inline export buttons in the output bar.
    - **This Project**: Adds a comprehensive **Export Hub** modal interface (`ExportDialog.tsx`) and a custom client-side **`midiEncoder.ts`** that serializes live piano-roll notes into multi-track Standard MIDI (`.mid`) files directly in the browser.
 
-3. **Enhanced Piano Roll UI & Controls**:
+4. **Enhanced Piano Roll UI & Controls**:
    - **Upstream**: Standard stem toggles and basic score triggers.
    - **This Project**: Improved instrument track selection, note interaction handlers (`pianoroll.ts`), and streamlined sheet music engraving actions.
 
-4. **Project Management & CI/CD Tracking**:
+5. **Project Management & CI/CD Tracking**:
    - Tracked via dedicated **GitHub Project Board #5** ([MuScriptor Development Board](https://github.com/users/Richie086/projects/5)) with feature branching and mandatory Pull Request code reviews.
 
 ---
