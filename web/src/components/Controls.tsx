@@ -119,6 +119,18 @@ export function Controls(props: {
         />
         <span>Stereo</span>
       </label>
+      <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-muted px-3">
+        <input
+          className="cursor-pointer accent-accent"
+          type="checkbox"
+          checked={audio.getEightBitMode()}
+          onChange={(e) => {
+            audio.setEightBitMode(e.target.checked);
+            e.currentTarget.blur();
+          }}
+        />
+        <span className={clsx(audio.getEightBitMode() && "text-accent font-semibold")}>👾 8-Bit Retro</span>
+      </label>
     </div>
   );
 }

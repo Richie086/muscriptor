@@ -99,6 +99,42 @@ export class AudioEngine {
   private mix = 0.75; // 0 = full WAV, 1 = full MIDI
   /** When true: original audio hard-left, synthesis hard-right (mix ignored). */
   private stereo = false;
+  private eightBitNode: WaveShaperNode | null = null;
+  private isEightBit = false;
+
+  setEightBitMode(enabled: boolean) {
+    this.isEightBit = enabled;
+    if (!this.eightBitNode) {
+      this.eightBitNode = this.ctx.createWaveShaper();
+      const n = 256;
+      const curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = (i / (n - 1)) * 2 - 1;
+        // Step quantization to 8-bit resolution (256 discrete levels)
+        curve[i] = Math.round(x * 128) / 128;
+      }
+      this.eightBitNode.curve = curve;
+      this.eightBitNode.oversample = "none";
+    }
+
+    try {
+      this.midiGain.disconnect();
+      this.eightBitNode.disconnect();
+    } catch {
+      // Ignore disconnect errors if not connected
+    }
+
+    if (enabled) {
+      this.midiGain.connect(this.eightBitNode);
+      this.eightBitNode.connect(this.midiPanner);
+    } else {
+      this.midiGain.connect(this.midiPanner);
+    }
+  }
+
+  getEightBitMode(): boolean {
+    return this.isEightBit;
+  }
 
   constructor() {
     // Tone.getContext() lazily creates a (suspended) AudioContext — no user

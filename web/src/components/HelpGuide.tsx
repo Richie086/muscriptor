@@ -100,6 +100,29 @@ export function HelpGuide() {
       ),
     },
     {
+      id: "eightbit",
+      title: "👾 8-Bit Retro Low-Resolution Synthesis",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Transform audio output into low-resolution, authentic 8-bit chiptune sound:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>8-Bit Quantization:</strong> Discretizes audio amplitude to 256 levels (8-bit PCM) for true retro arcade sound.
+            </li>
+            <li>
+              <strong>Sample-Rate Downsampling:</strong> Emulates 11kHz retro soundcard playback with step-hold sample reduction.
+            </li>
+            <li>
+              <strong>Live WebAudio Bitcrushing:</strong> Toggle <code className="text-accent">👾 8-Bit Retro</code> in the top player toolbar for real-time retro synthesis.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
       id: "synth",
       title: "🔊 High-Fidelity & Pure-Python Audio Synthesis",
       badge: "NEW",
