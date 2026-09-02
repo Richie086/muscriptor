@@ -1,0 +1,332 @@
+import { useEffect, useState, useMemo } from "react";
+import { Button } from "./Button";
+import { IconDownload } from "./icons";
+import { track } from "../analytics";
+import type { TranscriptionResult } from "../hooks/useTranscription";
+import type { RollNote } from "../pianoroll";
+import { createMidiFile } from "../midiEncoder";
+import { zipSync } from "fflate";
+
+export function ExportDialog(props: {
+  result: TranscriptionResult;
+  currentFile: File | null;
+  notes: RollNote[];
+  instruments: string[];
+  onOpenSheets: () => void;
+  onClose: () => void;
+}) {
+  const { result, currentFile, notes, instruments, onOpenSheets, onClose } = props;
+
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [synthAudioBlob, setSynthAudioBlob] = useState<Blob | null>(null);
+  const [mixAudioBlob, setMixAudioBlob] = useState<Blob | null>(null);
+
+  const stem = useMemo(() => {
+    if (!currentFile) return "transcription";
+    return currentFile.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
+  }, [currentFile]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  function saveBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  // Helper to fetch synthesized WAV if not already cached
+  async function fetchWav(mode: "synth" | "mix"): Promise<Blob> {
+    if (mode === "synth" && synthAudioBlob) return synthAudioBlob;
+    if (mode === "mix" && mixAudioBlob) return mixAudioBlob;
+
+    setLoadingAudio(true);
+    try {
+      const midiToUse = result.quantizedMidi ?? result.midi;
+      const form = new FormData();
+      form.set("midi", midiToUse, "transcription.mid");
+      if (mode === "mix" && currentFile) {
+        form.set("audio", currentFile, currentFile.name);
+      }
+
+      const res = await fetch(`/auralize?mode=${mode}`, {
+        method: "POST",
+        body: form,
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (mode === "synth") setSynthAudioBlob(blob);
+      if (mode === "mix") setMixAudioBlob(blob);
+      return blob;
+    } finally {
+      setLoadingAudio(false);
+    }
+  }
+
+  async function handleDownloadWav(mode: "synth" | "mix") {
+    track("download", { format: `wav_${mode}` });
+    const blob = await fetchWav(mode);
+    saveBlob(blob, `${stem}_${mode}.wav`);
+  }
+
+  function handleDownloadMidi(quantized: boolean) {
+    track("download", { format: quantized ? "midi_quantized" : "midi" });
+    const blob = quantized && result.quantizedMidi ? result.quantizedMidi : result.midi;
+    saveBlob(blob, `${stem}${quantized ? "_quantized" : ""}.mid`);
+  }
+
+  function handleDownloadInstrumentMidi(inst: string) {
+    track("download", { format: "midi_instrument", instrument: inst });
+    const instNotes = notes.filter((n) => n.instrument === inst);
+    const blob = createMidiFile(instNotes, inst);
+    saveBlob(blob, `${stem}_${inst}.mid`);
+  }
+
+  async function handleDownloadZipBundle() {
+    track("download", { format: "all_bundle_zip" });
+    setLoadingAudio(true);
+    try {
+      const zipFiles: Record<string, Uint8Array> = {};
+
+      // 1. Raw MIDI
+      const midiAb = await result.midi.arrayBuffer();
+      zipFiles[`${stem}.mid`] = new Uint8Array(midiAb);
+
+      // 2. Quantized MIDI
+      if (result.quantizedMidi) {
+        const qAb = await result.quantizedMidi.arrayBuffer();
+        zipFiles[`${stem}_quantized.mid`] = new Uint8Array(qAb);
+      }
+
+      // 3. Per-Instrument MIDIs
+      for (const inst of instruments) {
+        const instNotes = notes.filter((n) => n.instrument === inst);
+        if (instNotes.length > 0) {
+          const instBlob = createMidiFile(instNotes, inst);
+          zipFiles[`instruments/${inst}.mid`] = new Uint8Array(await instBlob.arrayBuffer());
+        }
+      }
+
+      // 4. Source audio if present
+      if (currentFile) {
+        const srcAb = await currentFile.arrayBuffer();
+        zipFiles[`original_${currentFile.name}`] = new Uint8Array(srcAb);
+      }
+
+      // 5. Synthesized audio
+      try {
+        const synthBlob = await fetchWav("synth");
+        zipFiles[`${stem}_synthesized.wav`] = new Uint8Array(await synthBlob.arrayBuffer());
+      } catch (e) {
+        console.warn("Could not fetch synth audio for zip bundle", e);
+      }
+
+      const zipped = zipSync(zipFiles);
+      const zipBlob = new Blob([zipped], { type: "application/zip" });
+      saveBlob(zipBlob, `${stem}_muscriptor_bundle.zip`);
+    } finally {
+      setLoadingAudio(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(11,12,16,0.72)] p-6 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Export Center"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-card border border-line-strong bg-surface shadow-overlay"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
+          <div>
+            <h2 className="m-0 text-lg font-semibold text-content">Export Hub</h2>
+            <p className="m-0 text-xs text-muted">
+              Download MIDI stems, synthesized audio, guitar tabs, and full score packages.
+            </p>
+          </div>
+          <Button onClick={onClose} kind="ghost" pad="px-3 py-1.5" className="text-xs">
+            ✕ Close
+          </Button>
+        </div>
+
+        {/* 1-Click ZIP Bundle Banner */}
+        <div className="border-b border-line bg-accent-1/10 px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <span className="inline-block font-mono text-[10px] uppercase tracking-wider text-accent-1">
+                All-in-One Export
+              </span>
+              <h3 className="m-0 text-sm font-semibold text-content">Complete Project Archive (.zip)</h3>
+              <p className="m-0 text-xs text-muted">
+                Includes raw & quantized MIDI, instrument stems, synthesized WAV audio, and source file.
+              </p>
+            </div>
+            <Button
+              kind="primary"
+              disabled={loadingAudio}
+              className="inline-flex shrink-0 items-center gap-2"
+              onClick={handleDownloadZipBundle}
+            >
+              <IconDownload />
+              {loadingAudio ? "Preparing Bundle..." : "Download Complete Bundle"}
+            </Button>
+          </div>
+        </div>
+
+        {/* Export Options Grid */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6">
+          {/* MIDI Files */}
+          <div>
+            <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-muted">
+              🎵 MIDI Files
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                kind="secondary"
+                pad="p-3"
+                className="flex flex-col items-start text-left gap-1"
+                onClick={() => handleDownloadMidi(false)}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="font-semibold text-sm text-content">Raw MIDI</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-raised border border-line text-muted">
+                    .mid
+                  </span>
+                </div>
+                <span className="text-xs text-muted">Exact transcribed performance timing</span>
+              </Button>
+
+              {result.quantizedMidi && (
+                <Button
+                  kind="secondary"
+                  pad="p-3"
+                  className="flex flex-col items-start text-left gap-1"
+                  onClick={() => handleDownloadMidi(true)}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-sm text-content">Quantized MIDI</span>
+                    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-raised border border-line text-accent-1">
+                      GRID MATCHED
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted">Beat-aligned timing for DAWs & sheet music</span>
+                </Button>
+              )}
+            </div>
+
+            {/* Instrument Stems */}
+            {instruments.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-line/50">
+                <span className="block text-[11px] font-medium text-muted mb-2">
+                  Individual Instrument MIDI Stems:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {instruments.map((inst) => (
+                    <Button
+                      key={inst}
+                      kind="ghost"
+                      pad="px-2.5 py-1"
+                      className="text-xs rounded border border-line hover:border-accent-1 text-content flex items-center gap-1.5"
+                      onClick={() => handleDownloadInstrumentMidi(inst)}
+                    >
+                      <IconDownload />
+                      <span>{inst.replace(/_/g, " ")}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Audio Files */}
+          <div>
+            <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-muted">
+              🔊 Audio Renderings (WAV)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                kind="secondary"
+                pad="p-3"
+                disabled={loadingAudio}
+                className="flex flex-col items-start text-left gap-1"
+                onClick={() => handleDownloadWav("synth")}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="font-semibold text-sm text-content">Synthesized WAV</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-raised border border-line text-muted">
+                    SoundFont
+                  </span>
+                </div>
+                <span className="text-xs text-muted">Full audio playback of transcribed MIDI</span>
+              </Button>
+
+              <Button
+                kind="secondary"
+                pad="p-3"
+                disabled={loadingAudio || !currentFile}
+                className="flex flex-col items-start text-left gap-1"
+                onClick={() => handleDownloadWav("mix")}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="font-semibold text-sm text-content">Stereo Comparison Mix</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-raised border border-line text-muted">
+                    L:Original / R:Synth
+                  </span>
+                </div>
+                <span className="text-xs text-muted">Original in left ear, synthesis in right</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Guitar Tab & Sheet Music */}
+          <div>
+            <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-muted">
+              🎸 Guitar Tabs & Sheet Music
+            </h4>
+            <div className="rounded-card border border-line bg-surface-raised p-4 flex items-center justify-between gap-4">
+              <div>
+                <h5 className="m-0 text-sm font-semibold text-content">
+                  Engraved PDFs, MusicXML & Guitar Tablature
+                </h5>
+                <p className="m-0 text-xs text-muted mt-0.5">
+                  Generates full score PDFs, standard notation per instrument, and guitar/bass tab staves via MuseScore.
+                </p>
+              </div>
+              <Button
+                kind="primary"
+                className="inline-flex shrink-0 items-center gap-2"
+                onClick={() => {
+                  onClose();
+                  onOpenSheets();
+                }}
+              >
+                <IconDownload />
+                Open Sheet Music Engraver
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-line px-6 py-3 flex justify-end bg-surface">
+          <Button onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    </div>
+  );
+}

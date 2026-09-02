@@ -1,6 +1,8 @@
 """Audio loading and resampling utilities. WAV is handled by the stdlib;
-other formats fall back to `soundfile`."""
+other formats (MP3, FLAC, OGG, M4A, …) use PyAV, soundfile, or torchaudio."""
 
+import io
+import os
 import wave
 from pathlib import Path
 from typing import IO
@@ -53,29 +55,87 @@ def _read_wav_file(source) -> tuple[torch.Tensor, int]:
     return torch.from_numpy(np.ascontiguousarray(data.T)), sr
 
 
-def _read_non_wav_file(source: str | Path | IO[bytes]) -> tuple[torch.Tensor, int]:
-    """Load a non-WAV audio file using `soundfile`.
+def _read_non_wav_file(source: str | Path | IO[bytes], filename: str | None = None) -> tuple[torch.Tensor, int]:
+    """Load a non-WAV audio file (e.g. MP3, FLAC, OGG, M4A) using PyAV, soundfile, or temporary file fallback.
 
     `source` may be a filesystem path or a binary file-like object (e.g. an
-    ``io.BytesIO`` of an uploaded file), since libsndfile reads either.
+    ``io.BytesIO`` of an uploaded file).
 
     Returns:
         (wav, sr) where wav has shape [C, T] and is float32 in [-1, 1].
     """
+    # 1. Try PyAV (FFmpeg python bindings) — decodes MP3 and all compressed formats flawlessly from memory or disk
+    try:
+        import av
+        if not isinstance(source, (str, Path)) and hasattr(source, "seek"):
+            source.seek(0)
+        container = av.open(source)
+        audio_stream = next(s for s in container.streams if s.type == "audio")
+        resampler = av.AudioResampler(format="fltp")
+        frames = []
+        for frame in container.decode(audio_stream):
+            resampled_frames = resampler.resample(frame)
+            for rframe in resampled_frames:
+                frames.append(rframe.to_ndarray())
+        if frames:
+            full_audio = np.concatenate(frames, axis=1)  # [C, T]
+            sr = audio_stream.codec_context.sample_rate or 44100
+            wav = torch.from_numpy(np.ascontiguousarray(full_audio))
+            return wav, sr
+    except Exception:
+        pass
+
+    # 2. Try soundfile directly
     try:
         import soundfile as sf
-    except ImportError as e:
-        raise ImportError(
-            "soundfile is required to read non-WAV audio files. "
-            "Install with: `pip install soundfile` or `uvx --with soundfile`"
-        ) from e
+        if not isinstance(source, (str, Path)) and hasattr(source, "seek"):
+            source.seek(0)
+        target = str(source) if isinstance(source, (str, Path)) else source
+        data, sample_rate = sf.read(target, dtype="float32")
+        if data.ndim == 1:
+            data = data[:, None]
+        wav = torch.from_numpy(np.ascontiguousarray(data.T))
+        return wav, sample_rate
+    except Exception:
+        pass
 
-    target = str(source) if isinstance(source, (str, Path)) else source
-    data, sample_rate = sf.read(target, dtype="float32")
-    if data.ndim == 1:
-        data = data[:, None]
-    wav = torch.from_numpy(np.ascontiguousarray(data.T))
-    return wav, sample_rate
+    # 3. If source is an in-memory BytesIO and soundfile/av failed on raw buffer, dump to temp file with original extension hint (e.g. .mp3)
+    if not isinstance(source, (str, Path)):
+        import tempfile
+        ext = ".mp3"
+        if filename:
+            suffix = Path(filename).suffix
+            if suffix:
+                ext = suffix
+        source.seek(0)
+        data_bytes = source.read()
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(data_bytes)
+            tmp_path = tmp.name
+        try:
+            import soundfile as sf
+            data, sample_rate = sf.read(tmp_path, dtype="float32")
+            if data.ndim == 1:
+                data = data[:, None]
+            wav = torch.from_numpy(np.ascontiguousarray(data.T))
+            return wav, sample_rate
+        except Exception:
+            pass
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    # 4. Fallback to torchaudio
+    try:
+        import torchaudio
+        if not isinstance(source, (str, Path)) and hasattr(source, "seek"):
+            source.seek(0)
+        wav, sample_rate = torchaudio.load(source)
+        if wav.dtype != torch.float32:
+            wav = wav.to(torch.float32)
+        return wav, sample_rate
+    except Exception as ta_error:
+        raise RuntimeError(f"Could not decode audio file: {ta_error}") from ta_error
 
 
 def resample(
@@ -90,12 +150,7 @@ def resample(
 
 
 def load_audio(path: str | Path, target_sr: int = 16000) -> torch.Tensor:
-    """Load an audio file and return a mono float32 tensor at target_sr.
-
-    PCM WAV files are read with the stdlib `wave` module. Other formats (mp3,
-    flac, ogg, m4a, …) are decoded via `soundfile`. Dispatch is by content, not
-    file extension, so misnamed files (e.g. an MP3 upload saved as .wav) still
-    load.
+    """Load an audio file (MP3, WAV, FLAC, OGG, M4A, …) and return a mono float32 tensor at target_sr.
 
     Returns:
         Tensor of shape [1, T] at target_sr.
@@ -104,7 +159,7 @@ def load_audio(path: str | Path, target_sr: int = 16000) -> torch.Tensor:
     try:
         wav, sr = _read_wav_file(str(filepath))
     except (wave.Error, EOFError):
-        wav, sr = _read_non_wav_file(str(filepath))
+        wav, sr = _read_non_wav_file(str(filepath), filename=filepath.name)
     if wav.shape[0] > 1:
         wav = wav.mean(dim=0, keepdim=True)
     if sr != target_sr:

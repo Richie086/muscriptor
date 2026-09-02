@@ -87,13 +87,7 @@ export function Controls(props: {
           value={mix}
           disabled={stereo}
           onChange={(e) => onMixChange(parseFloat(e.target.value))}
-          // Drop focus once the drag ends so Space keeps toggling play/pause
-          // (the global handler ignores Space while an input is focused).
-          // Range inputs implicitly capture the pointer, so this fires even
-          // when the drag is released outside the slider.
           onPointerUp={(e) => e.currentTarget.blur()}
-          // Clicks on the label's Original/MIDI spans focus the slider via a
-          // forwarded click with no pointer event, so blur on click too.
           onClick={(e) => e.currentTarget.blur()}
         />
         <span
@@ -112,9 +106,6 @@ export function Controls(props: {
           type="checkbox"
           checked={stereo}
           onChange={(e) => onStereoChange(e.target.checked)}
-          // Same as the slider: keep Space bound to play/pause after clicking.
-          // click (not pointerup) also catches clicks on the wrapping label,
-          // which the browser forwards to the checkbox.
           onClick={(e) => e.currentTarget.blur()}
         />
         <span>Stereo</span>

@@ -269,6 +269,10 @@ export class PianoRoll {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  getNotes(): RollNote[] {
+    return this.notes;
+  }
+
   addNote(n: RollNote) {
     this.notes.push(n);
     // The transcribed frontier never lags behind the most recent note's onset.

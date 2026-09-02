@@ -9,6 +9,7 @@ import {
 } from "./hooks/useTranscription";
 import { Controls } from "./components/Controls";
 import { OutputBar } from "./components/OutputBar";
+import { ExportDialog } from "./components/ExportDialog";
 import { FeedbackLine } from "./components/FeedbackLine";
 import { PianoRollCanvas } from "./components/PianoRollCanvas";
 import { InstrumentList } from "./components/InstrumentList";
@@ -87,6 +88,7 @@ export function App() {
   const [stereo, setStereo] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
   const [condSelected, setCondSelected] = useState<Set<string>>(() => new Set());
+  const [exportHubOpen, setExportHubOpen] = useState(false);
   // True while a file is being dragged over the window. On the welcome screen
   // this swaps the panel's prompt in place instead of showing the overlay.
   const [dragging, setDragging] = useState(false);
@@ -449,8 +451,30 @@ export function App() {
             progressLabelRef={progressLabelRef}
             result={result}
             currentFile={currentFile}
+            notes={rollRef.current?.getNotes() ?? []}
+            instruments={instruments}
             onTranscribeAnother={transcribeAnother}
+            onOpenExportHub={() => setExportHubOpen(true)}
+            onOpenSheets={() => {
+              // Trigger sheets engraver in OutputBar
+              const sheetsBtn = document.querySelector('button[title*="Engrave"]') as HTMLButtonElement | null;
+              sheetsBtn?.click();
+            }}
           />
+
+          {result && exportHubOpen && (
+            <ExportDialog
+              result={result}
+              currentFile={currentFile}
+              notes={rollRef.current?.getNotes() ?? []}
+              instruments={instruments}
+              onOpenSheets={() => {
+                const sheetsBtn = document.querySelector('button[title*="Engrave"]') as HTMLButtonElement | null;
+                sheetsBtn?.click();
+              }}
+              onClose={() => setExportHubOpen(false)}
+            />
+          )}
         </main>
       )}
 

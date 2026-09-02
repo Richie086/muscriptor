@@ -4,9 +4,10 @@ import type { AudioEngine } from "../audio";
 import { Button } from "./Button";
 import { instrumentColor, type PianoRoll } from "../pianoroll";
 import { label } from "../instruments";
-import { IconSound, IconSoundOff } from "./icons";
+import { IconDownload, IconSound, IconSoundOff } from "./icons";
+import { createMidiFile } from "../midiEncoder";
+import { track } from "../analytics";
 
-/** A circled "?" that reveals an explanatory tooltip on hover/focus. */
 function HelpHint(props: { children: string }) {
   return (
     <span className="group/help relative ml-1.5 inline-flex align-middle">
@@ -27,7 +28,6 @@ function HelpHint(props: { children: string }) {
   );
 }
 
-/** A given instrument that wasn't detected: gray, struck-through, no controls. */
 function UndetectedRow(props: { name: string }) {
   return (
     <li className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-muted opacity-40 [animation:rise_0.4s_var(--ease-fluid)_both]">
@@ -40,17 +40,16 @@ function UndetectedRow(props: { name: string }) {
   );
 }
 
-/** An interactive detected instrument with mute + solo controls. */
 function InstrumentRow(props: {
   name: string;
   muted: boolean;
   soloed: boolean;
   onToggleMute: () => void;
   onToggleSolo: () => void;
-  /** Hovering the row spotlights this instrument's notes on the piano roll. */
+  onExportMidi: () => void;
   onHover: (name: string | null) => void;
 }) {
-  const { name, muted, soloed, onToggleMute, onToggleSolo, onHover } = props;
+  const { name, muted, soloed, onToggleMute, onToggleSolo, onExportMidi, onHover } = props;
   return (
     <li
       className="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-muted transition-colors duration-150 ease-fluid hover:bg-white/[0.04] hover:text-content [animation:rise_0.4s_var(--ease-fluid)_both]"
@@ -72,6 +71,15 @@ function InstrumentRow(props: {
         </span>
       </div>
       <div className="flex items-center gap-0.5">
+        <Button
+          type="button"
+          kind="ghost"
+          className="-my-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted opacity-50 transition-opacity duration-150 hover:opacity-100 hover:text-content"
+          title={`Download ${label(name)} MIDI stem`}
+          onClick={onExportMidi}
+        >
+          <IconDownload />
+        </Button>
         <Button
           type="button"
           kind="ghost"
@@ -117,7 +125,6 @@ export function InstrumentList(props: {
   const [muted, setMuted] = useState<Set<string>>(() => new Set());
   const [soloed, setSoloed] = useState<string | null>(null);
 
-  // Keep the audio engine and piano roll in sync with the muted set.
   useEffect(() => {
     for (const name of instruments) {
       audio.setInstrumentMuted(name, muted.has(name));
@@ -145,6 +152,19 @@ export function InstrumentList(props: {
     }
   };
 
+  const exportInstrumentMidi = (name: string) => {
+    track("download", { format: "midi_instrument_row", instrument: name });
+    const notes = rollRef.current?.getNotes() ?? [];
+    const instNotes = notes.filter((n) => n.instrument === name);
+    const blob = createMidiFile(instNotes, name);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.mid`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+
   const row = (name: string) => (
     <InstrumentRow
       key={name}
@@ -153,13 +173,13 @@ export function InstrumentList(props: {
       soloed={soloed === name}
       onToggleMute={() => toggleMute(name)}
       onToggleSolo={() => toggleSolo(name)}
+      onExportMidi={() => exportInstrumentMidi(name)}
       onHover={(n) => rollRef.current?.setHighlightedInstrument(n)}
     />
   );
 
   const detectedSet = new Set(instruments);
   const hasGiven = given.size > 0;
-  // Detected instruments that weren't in the given list.
   const extra = instruments.filter((name) => !given.has(name));
 
   return (
@@ -182,15 +202,12 @@ export function InstrumentList(props: {
               ),
             )}
           </ul>
-          {/* Now we don't allow non-specified instruments to appear, so probably dead code.
-            * Keeping for now in case we go back/make it configurable */}
           {extra.length > 0 && (
             <>
               <h2 className="m-0 mb-3 mt-5 text-base font-semibold">
                 More instruments{" "}
                 <HelpHint>
-                  More instruments that the model detected in the audio, even
-                  without them being explicitly given.
+                  More instruments that the model detected in the audio.
                 </HelpHint>
               </h2>
               <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-sm">

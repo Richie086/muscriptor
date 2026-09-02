@@ -234,7 +234,7 @@ def create_app(model: TranscriptionModel, web_dir: str | Path | None = None) -> 
             wav, sr = _read_wav_file(io.BytesIO(data))
         except (wave.Error, EOFError):
             try:
-                wav, sr = _read_non_wav_file(io.BytesIO(data))
+                wav, sr = _read_non_wav_file(io.BytesIO(data), filename=file.filename)
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
