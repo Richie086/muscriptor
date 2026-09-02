@@ -120,11 +120,10 @@ export function WelcomeScreen(props: {
         it transcribes the notes played by every instrument into MIDI and sheet
         music, for you to download or explore interactively.
       </p>
-      {/* Explicit extensions alongside the wildcard, needed for iOS Safari
-       * which sometimes grays out perfectly valid audio files otherwise. */}
+      {/* Explicit extensions alongside wildcards, needed for iOS Safari & OS file pickers */}
       <input
         type="file"
-        accept="audio/*,.mp3,.m4a,.aac,.wav,.aiff,.aif,.flac,.ogg,.oga,.opus"
+        accept="audio/*,video/*,.mp3,.m4a,.aac,.mp4,.webm,.mov,.mkv,.wav,.aiff,.aif,.flac,.ogg,.oga,.opus"
         hidden
         ref={fileInputRef}
         onChange={(e) => {
@@ -152,7 +151,7 @@ export function WelcomeScreen(props: {
               ) : (
                 <>
                   Drop an{" "}
-                  <strong className="font-semibold text-content">audio file</strong> here,
+                  <strong className="font-semibold text-content">audio or video file</strong> here (MP3, MP4, WAV, M4A, OGG…),
                   or
                 </>
               )}
@@ -163,7 +162,7 @@ export function WelcomeScreen(props: {
               className="rounded-xl border-transparent bg-content font-semibold text-[#15151b] hover:border-transparent hover:bg-white"
               onClick={() => fileInputRef.current?.click()}
             >
-              Select an audio file
+              Select an audio or video file
             </Button>
             <Button
               kind="ghost"

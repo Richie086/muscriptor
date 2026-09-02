@@ -56,7 +56,7 @@ def _read_wav_file(source) -> tuple[torch.Tensor, int]:
 
 
 def _read_non_wav_file(source: str | Path | IO[bytes], filename: str | None = None) -> tuple[torch.Tensor, int]:
-    """Load a non-WAV audio file (e.g. MP3, FLAC, OGG, M4A) using PyAV, soundfile, or temporary file fallback.
+    """Load a non-WAV audio or video container file (e.g. MP4, M4A, AAC, WEBM, OGG, FLAC, MP3) using PyAV, soundfile, ffmpeg, or torchaudio fallback.
 
     `source` may be a filesystem path or a binary file-like object (e.g. an
     ``io.BytesIO`` of an uploaded file).
@@ -64,7 +64,7 @@ def _read_non_wav_file(source: str | Path | IO[bytes], filename: str | None = No
     Returns:
         (wav, sr) where wav has shape [C, T] and is float32 in [-1, 1].
     """
-    # 1. Try PyAV (FFmpeg python bindings) — decodes MP3 and all compressed formats flawlessly from memory or disk
+    # 1. Try PyAV (FFmpeg python bindings) — decodes MP4, M4A, AAC, WEBM, OGG, MP3, FLAC from memory or disk
     try:
         import av
         if not isinstance(source, (str, Path)) and hasattr(source, "seek"):
@@ -99,7 +99,7 @@ def _read_non_wav_file(source: str | Path | IO[bytes], filename: str | None = No
     except Exception:
         pass
 
-    # 3. If source is an in-memory BytesIO and soundfile/av failed on raw buffer, dump to temp file with original extension hint (e.g. .mp3)
+    # 3. Tempfile fallback with ffmpeg CLI or soundfile
     if not isinstance(source, (str, Path)):
         import tempfile
         ext = ".mp3"
@@ -113,12 +113,22 @@ def _read_non_wav_file(source: str | Path | IO[bytes], filename: str | None = No
             tmp.write(data_bytes)
             tmp_path = tmp.name
         try:
+            # 3a. Try soundfile
             import soundfile as sf
             data, sample_rate = sf.read(tmp_path, dtype="float32")
             if data.ndim == 1:
                 data = data[:, None]
             wav = torch.from_numpy(np.ascontiguousarray(data.T))
             return wav, sample_rate
+        except Exception:
+            pass
+        try:
+            # 3b. Try ffmpeg CLI fallback (extracts audio from MP4, M4A, WEBM, MOV, etc.)
+            import subprocess
+            cmd = ["ffmpeg", "-i", tmp_path, "-f", "wav", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2", "pipe:1"]
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            if proc.stdout:
+                return _read_wav_file(io.BytesIO(proc.stdout))
         except Exception:
             pass
         finally:
@@ -135,7 +145,7 @@ def _read_non_wav_file(source: str | Path | IO[bytes], filename: str | None = No
             wav = wav.to(torch.float32)
         return wav, sample_rate
     except Exception as ta_error:
-        raise RuntimeError(f"Could not decode audio file: {ta_error}") from ta_error
+        raise RuntimeError(f"Could not decode audio/video file: {ta_error}") from ta_error
 
 
 def resample(

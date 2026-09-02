@@ -25,8 +25,9 @@
 ### ✨ Key Features
 
 - **Multi-Instrument Audio Transcription**: Separates and transcribes pitch, duration, and onset timings for multiple instruments simultaneously.
+- **Expanded Audio & Video Container Support**: Built-in support for MP4, M4A, AAC, WEBM, MOV, OGG, FLAC, MP3, and WAV files with automatic multi-backend decoding (`_read_non_wav_file`).
 - **Interactive Web UI**: Real-time piano-roll rendering, audio playback, stem controls, and track isolation.
-- **Pure-Python Audio Fallback**: Robust handling for standard and custom audio formats even in restricted environments.
+- **Pure-Python Audio Fallback**: Robust handling for standard and custom audio formats even in restricted environments without native SoundFont binaries.
 - **Sheet Music & Tablature Engraving**: Generates quantized MusicXML, full score PDFs, and instrument tablatures using MuseScore 4.
 - **Flexible Deployment**: Supports local Web UI hosting, CLI execution, and integration into Python applications.
 
@@ -36,20 +37,50 @@
 
 This repository (`Richie086/muscriptor`) includes several core improvements over the original Kyutai base repository:
 
-1. **Pure-Python Audio Processing Fallback**:
+1. **Expanded Audio & Video Container Ingestion**:
+   - **Upstream**: Primary support focused on WAV audio formats with errors on certain MP3/compressed streams in restrictive environments.
+   - **This Project**: Added support for MP4, M4A, AAC, WEBM, OGG, FLAC, MP3, and WAV files with PyAV, soundfile, ffmpeg CLI, and torchaudio stream extraction via `_read_non_wav_file` in `muscriptor/utils/audio.py`.
+
+2. **Pure-Python Audio Processing Fallback**:
    - **Upstream**: Required native system dependencies (`fluidsynth`) to process audio soundfonts and auralizations.
    - **This Project**: Implements a pure-Python additive synthesizer fallback (`muscriptor/utils/auralization.py` & `muscriptor/utils/audio.py`) using `scipy`/`numpy` harmonic synthesis. Transcription and audio playback run smoothly even in constrained environments without native libraries.
 
-2. **Interactive Export Hub & Client-Side MIDI Encoding**:
+3. **Interactive Export Hub & Client-Side MIDI Encoding**:
    - **Upstream**: Basic inline export buttons in the output bar.
    - **This Project**: Adds a comprehensive **Export Hub** modal interface (`ExportDialog.tsx`) and a custom client-side **`midiEncoder.ts`** that serializes live piano-roll notes into multi-track Standard MIDI (`.mid`) files directly in the browser.
 
-3. **Enhanced Piano Roll UI & Controls**:
+4. **Enhanced Piano Roll UI & Controls**:
    - **Upstream**: Standard stem toggles and basic score triggers.
    - **This Project**: Improved instrument track selection, note interaction handlers (`pianoroll.ts`), and streamlined sheet music engraving actions.
 
-4. **Project Management & CI/CD Tracking**:
+5. **Project Management & CI/CD Tracking**:
    - Tracked via dedicated **GitHub Project Board #5** ([MuScriptor Development Board](https://github.com/users/Richie086/projects/5)) with feature branching and mandatory Pull Request code reviews.
+
+---
+
+## 🗺️ Product & Technical Roadmap
+
+All features are actively tracked on the **[MuScriptor Development Board](https://github.com/users/Richie086/projects/5)**.
+
+### 📍 Phase 1: Interactive Piano Roll Editing & Quantization
+- [ ] **In-Browser Note Editing** ([#5](https://github.com/Richie086/muscriptor/issues/5)): Edit pitch, trim note durations, manually add missing notes, or delete false positives directly on the canvas.
+- [ ] **Live Quantization & Grid Snap** ([#6](https://github.com/Richie086/muscriptor/issues/6)): Switch grid divisions (1/4, 1/8, 1/16, triplets, swing) on the fly with real-time visual snapping.
+- [ ] **Regional A-B Looping & Scrubbing** ([#7](https://github.com/Richie086/muscriptor/issues/7)): Interactive playhead scrubbing and A-B loop regions for isolating and practicing song sections.
+
+### 📍 Phase 2: In-Browser Notation & SoundFont Customization
+- [ ] **Native In-Browser Sheet Music & Guitar Tabs** ([#8](https://github.com/Richie086/muscriptor/issues/8)): Render interactive sheet music and guitar tabs directly in the web UI without local MuseScore dependencies.
+- [ ] **Automatic Chord & Key Signature Detection** ([#9](https://github.com/Richie086/muscriptor/issues/9)): Auto-detect chord progressions (e.g. *Cmaj7, Am9*) and key signatures along the timeline ruler.
+- [ ] **Custom WebAudio Synthesizers** ([#10](https://github.com/Richie086/muscriptor/issues/10)): Pick custom SoundFonts and WebAudio synths (Grand Piano, Electric Bass, Synth Lead) for stem playback.
+
+### 📍 Phase 3: Real-Time Capture & DAW Integrations
+- [ ] **Live Microphone & Audio Input Stream** ([#11](https://github.com/Richie086/muscriptor/issues/11)): Stream audio input directly from browser microphone into the transcription engine.
+- [ ] **WebMIDI Engine** ([#12](https://github.com/Richie086/muscriptor/issues/12)): Route transcribed notes directly to connected WebMIDI hardware keyboards and DAW devices.
+- [ ] **DAW Session Exporters** ([#13](https://github.com/Richie086/muscriptor/issues/13)): Export multi-track sessions as Ableton Live (`.als`), FL Studio (`.flp`), or Logic XML.
+
+### 📍 Phase 4: AI Model & Stem Pre-processing
+- [ ] **Batch Audio Processing & ZIP Export** ([#14](https://github.com/Richie086/muscriptor/issues/14)): Queue multiple audio files or full album directories for batch transcription.
+- [ ] **Demucs Stem Pre-processing** ([#15](https://github.com/Richie086/muscriptor/issues/15)): Pre-filter dense audio mixes through Demucs source separation prior to transcription inference.
+- [ ] **Project Session Persistence (`.muscriptor`)** ([#16](https://github.com/Richie086/muscriptor/issues/16)): Save and restore complete session states, edits, audio stems, and track configurations.
 
 ---
 
