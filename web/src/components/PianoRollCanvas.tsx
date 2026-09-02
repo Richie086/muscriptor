@@ -15,10 +15,12 @@ export function PianoRollCanvas(props: {
   const [selectedNote, setSelectedNote] = useState<RollNote | null>(null);
 
   const handleDeleteSelected = () => {
-    if (!selectedNote || !rollRef.current) return;
-    rollRef.current.deleteNote(selectedNote);
+    const roll = rollRef.current;
+    const sel = roll?.getSelectedNote();
+    if (!roll || !sel) return;
+    roll.deleteNote(sel);
     setSelectedNote(null);
-    audio.reloadNotes(rollRef.current.getNotes());
+    audio.reloadNotes(roll.getNotes());
   };
 
   useEffect(() => {
