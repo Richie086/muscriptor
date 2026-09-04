@@ -65,32 +65,6 @@ This repository (`Richie086/muscriptor`) includes several core improvements over
 
 ---
 
-## 🗺️ Product & Technical Roadmap
-
-All features are actively tracked on the **[MuScriptor Development Board](https://github.com/users/Richie086/projects/5)**.
-
-### 📍 Phase 1: Interactive Piano Roll Editing & Quantization
-- [ ] **In-Browser Note Editing** ([#5](https://github.com/Richie086/muscriptor/issues/5)): Edit pitch, trim note durations, manually add missing notes, or delete false positives directly on the canvas.
-- [ ] **Live Quantization & Grid Snap** ([#6](https://github.com/Richie086/muscriptor/issues/6)): Switch grid divisions (1/4, 1/8, 1/16, triplets, swing) on the fly with real-time visual snapping.
-- [ ] **Regional A-B Looping & Scrubbing** ([#7](https://github.com/Richie086/muscriptor/issues/7)): Interactive playhead scrubbing and A-B loop regions for isolating and practicing song sections.
-
-### 📍 Phase 2: In-Browser Notation & SoundFont Customization
-- [ ] **Native In-Browser Sheet Music & Guitar Tabs** ([#8](https://github.com/Richie086/muscriptor/issues/8)): Render interactive sheet music and guitar tabs directly in the web UI without local MuseScore dependencies.
-- [ ] **Automatic Chord & Key Signature Detection** ([#9](https://github.com/Richie086/muscriptor/issues/9)): Auto-detect chord progressions (e.g. *Cmaj7, Am9*) and key signatures along the timeline ruler.
-- [ ] **Custom WebAudio Synthesizers** ([#10](https://github.com/Richie086/muscriptor/issues/10)): Pick custom SoundFonts and WebAudio synths (Grand Piano, Electric Bass, Synth Lead) for stem playback.
-
-### 📍 Phase 3: Real-Time Capture & DAW Integrations
-- [ ] **Live Microphone & Audio Input Stream** ([#11](https://github.com/Richie086/muscriptor/issues/11)): Stream audio input directly from browser microphone into the transcription engine.
-- [ ] **WebMIDI Engine** ([#12](https://github.com/Richie086/muscriptor/issues/12)): Route transcribed notes directly to connected WebMIDI hardware keyboards and DAW devices.
-- [ ] **DAW Session Exporters** ([#13](https://github.com/Richie086/muscriptor/issues/13)): Export multi-track sessions as Ableton Live (`.als`), FL Studio (`.flp`), or Logic XML.
-
-### 📍 Phase 4: AI Model & Stem Pre-processing
-- [ ] **Batch Audio Processing & ZIP Export** ([#14](https://github.com/Richie086/muscriptor/issues/14)): Queue multiple audio files or full album directories for batch transcription.
-- [ ] **Demucs Stem Pre-processing** ([#15](https://github.com/Richie086/muscriptor/issues/15)): Pre-filter dense audio mixes through Demucs source separation prior to transcription inference.
-- [ ] **Project Session Persistence (`.muscriptor`)** ([#16](https://github.com/Richie086/muscriptor/issues/16)): Save and restore complete session states, edits, audio stems, and track configurations.
-
----
-
 ## 🚀 Quickstart & Local Servers
 
 ### Prerequisites
