@@ -22,6 +22,8 @@
 
 **MuScriptor** is a state-of-the-art open-source multi-instrument music transcription system developed by [Kyutai](https://kyutai.org) and [Mirelo](https://www.mirelo.ai). It analyzes audio recordings (MP3, WAV, FLAC, OGG) and transcribes them into high-accuracy multi-track MIDI, interactive piano-roll visualizations, and engraved sheet music (MusicXML/PDF).
 
+<img width="2205" height="1231" alt="image" src="https://github.com/user-attachments/assets/b34eaa81-2e2a-4980-b3ac-bfe69949aa50" />
+
 ### ✨ Key Features
 
 - **Multi-Instrument Audio Transcription**: Separates and transcribes pitch, duration, and onset timings for multiple instruments simultaneously.
