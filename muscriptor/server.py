@@ -530,6 +530,33 @@ def create_app(model: TranscriptionModel, web_dir: str | Path | None = None) -> 
             },
         )
 
+    @app.post("/tabs")
+    async def tabs(
+        midi: Annotated[UploadFile, File()],
+        quantized: Annotated[bool, Form()] = False,
+    ) -> Response:
+        """Transcribe a MIDI file to ASCII guitar tabs & chord chart."""
+        from muscriptor.utils.sheets import _write_tabs_text
+
+        try:
+            midi_bytes = await midi.read()
+            with tempfile.TemporaryDirectory(prefix="muscriptor-tabs-") as tmp:
+                out_path = Path(tmp) / "guitar_tabs_chords.txt"
+                _write_tabs_text(midi_bytes, out_path)
+                tab_content = out_path.read_text(encoding="utf-8")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        return Response(
+            content=tab_content,
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": 'attachment; filename="guitar_tabs_chords.txt"'
+            },
+        )
+
+
+
     if web_dir is not None:
         web_path = Path(web_dir)
         if web_path.is_dir():

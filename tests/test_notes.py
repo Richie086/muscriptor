@@ -15,6 +15,7 @@ from muscriptor.tokenizer.notes import (
     trim_overlapping_notes,
     note_event2note,
     note2note_event,
+    note_event2midi,
 )
 from tests.encode_helpers import (
     note_event2event,
@@ -293,3 +294,17 @@ def test_note_event2note_drum():
     assert len(notes) == 1
     assert notes[0].is_drum
     assert notes[0].pitch == 36
+
+
+def test_vocal_track_represented_by_synth_string():
+    note_events = [
+        NoteEvent(is_drum=False, program=52, time=0.10, velocity=1, pitch=60),
+        NoteEvent(is_drum=False, program=52, time=0.50, velocity=0, pitch=60),
+    ]
+    midi = note_event2midi(note_events, program_names={52: "voice"})
+    program_changes = [
+        msg for track in midi.tracks for msg in track if msg.type == "program_change"
+    ]
+    assert len(program_changes) > 0
+    assert program_changes[0].program == 50
+

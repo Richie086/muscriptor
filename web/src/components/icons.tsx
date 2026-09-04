@@ -48,6 +48,41 @@ export function IconPause() {
   );
 }
 
+export function IconSkipBack() {
+  return (
+    <svg {...stroke} fill="currentColor">
+      <polygon points="19 20 9 12 19 4 19 20" />
+      <rect x="5" y="4" width="2.5" height="16" rx="0.5" />
+    </svg>
+  );
+}
+
+export function IconRewind() {
+  return (
+    <svg {...stroke} fill="currentColor">
+      <polygon points="11 19 2 12 11 5 11 19" />
+      <polygon points="22 19 13 12 22 5 22 19" />
+    </svg>
+  );
+}
+
+export function IconFastForward() {
+  return (
+    <svg {...stroke} fill="currentColor">
+      <polygon points="13 19 22 12 13 5 13 19" />
+      <polygon points="2 19 11 12 2 5 2 19" />
+    </svg>
+  );
+}
+
+export function IconStop() {
+  return (
+    <svg {...stroke} fill="currentColor">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+    </svg>
+  );
+}
+
 export function IconChevron({ className }: { className?: string }) {
   return (
     <svg

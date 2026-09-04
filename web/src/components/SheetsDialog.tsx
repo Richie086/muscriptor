@@ -158,6 +158,7 @@ const MIME: Record<string, string> = {
   pdf: "application/pdf",
   musicxml: "application/vnd.recordare.musicxml+xml",
   mid: "audio/midi",
+  txt: "text/plain",
 };
 
 function mimeOf(name: string): string {
@@ -173,11 +174,13 @@ function describe(name: string): string {
   if (name === "score.mid") return "MIDI file";
   if (name === "score.musicxml") return "MusicXML score";
   if (name === "full_score.pdf") return "Full score – every instrument";
+  if (name === "guitar_tabs_chords.txt") return "Guitar Tabs & Chord Chart (ASCII)";
   const part = name.match(/^\d+_(.+?)(_tab)?\.pdf$/);
   if (!part) return name;
   const instrument = part[1].replace(/_/g, " ");
   return instrument.charAt(0).toUpperCase() + instrument.slice(1) + (part[2] ? " — tablature" : "");
 }
+
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

@@ -2,7 +2,14 @@ import { useEffect, useState, type RefObject } from "react";
 import clsx from "clsx";
 import type { AudioEngine } from "../audio";
 import { Button } from "./Button";
-import { IconPlay, IconPause } from "./icons";
+import {
+  IconPlay,
+  IconPause,
+  IconStop,
+  IconRewind,
+  IconFastForward,
+  IconSkipBack,
+} from "./icons";
 
 export function Controls(props: {
   audio: AudioEngine;
@@ -21,31 +28,129 @@ export function Controls(props: {
   // The transport's state isn't React state (and it can auto-stop at the end),
   // so poll it each frame to keep the toggle button's label in sync.
   const [playing, setPlaying] = useState(false);
+  const [paused, setPaused] = useState(false);
+
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       setPlaying(audio.state === "started");
+      setPaused(audio.state === "paused");
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [audio]);
 
+  const handleStart = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    audio.seek(0);
+  };
+
+  const handleReverse = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    audio.seek(Math.max(0, audio.seconds - 5));
+  };
+
+  const handlePlay = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    audio.play();
+  };
+
+  const handlePause = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    audio.pause();
+  };
+
+  const handleStop = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    audio.stop();
+  };
+
+  const handleFastForward = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    const dur = audio.duration || Infinity;
+    audio.seek(Math.min(dur, audio.seconds + 5));
+  };
+
   return (
     <div className="col-span-full flex flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 py-3 animate-rise [animation-delay:0.06s]">
-      <Button
-        className={clsx(
-          "inline-flex items-center gap-2",
-          playing && "border-accent bg-accent text-white hover:border-accent hover:bg-accent",
-        )}
-        onClick={(e) => {
-          e.currentTarget.blur();
-          playing ? audio.pause() : audio.play();
-        }}
-      >
-        {playing ? <IconPause /> : <IconPlay />}
-        {playing ? "Pause" : "Play"}
-      </Button>
+      {/* Transport Control Cluster */}
+      <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-surface-2 p-1 shadow-sm">
+        {/* Go to Start */}
+        <button
+          type="button"
+          onClick={handleStart}
+          title="Go to start of song (0.0s) [Home]"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-white/10 hover:text-white active:scale-95"
+        >
+          <IconSkipBack />
+        </button>
+
+        {/* Reverse / Rewind (-5s) */}
+        <button
+          type="button"
+          onClick={handleReverse}
+          title="Reverse 5 seconds [←]"
+          className="flex h-8 px-2 items-center justify-center gap-1 rounded-md text-xs font-medium text-muted transition-colors hover:bg-white/10 hover:text-white active:scale-95"
+        >
+          <IconRewind />
+          <span>-5s</span>
+        </button>
+
+        {/* Play */}
+        <button
+          type="button"
+          onClick={handlePlay}
+          title="Play [Space]"
+          className={clsx(
+            "flex h-8 px-3 items-center justify-center gap-1.5 rounded-md text-xs font-semibold transition-all active:scale-95",
+            playing
+              ? "bg-accent text-white shadow-md ring-1 ring-accent-1"
+              : "bg-surface-3 text-content hover:bg-white/15 hover:text-white",
+          )}
+        >
+          <IconPlay />
+          <span>Play</span>
+        </button>
+
+        {/* Pause */}
+        <button
+          type="button"
+          onClick={handlePause}
+          title="Pause [Space]"
+          className={clsx(
+            "flex h-8 px-3 items-center justify-center gap-1.5 rounded-md text-xs font-semibold transition-all active:scale-95",
+            paused
+              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+              : "text-muted hover:bg-white/10 hover:text-white",
+          )}
+        >
+          <IconPause />
+          <span>Pause</span>
+        </button>
+
+        {/* Stop */}
+        <button
+          type="button"
+          onClick={handleStop}
+          title="Stop and reset to start [Esc]"
+          className="flex h-8 px-2.5 items-center justify-center gap-1.5 rounded-md text-xs font-medium text-muted transition-colors hover:bg-red-500/20 hover:text-red-300 active:scale-95"
+        >
+          <IconStop />
+          <span>Stop</span>
+        </button>
+
+        {/* Fast Forward (+5s) */}
+        <button
+          type="button"
+          onClick={handleFastForward}
+          title="Fast forward 5 seconds [→]"
+          className="flex h-8 px-2 items-center justify-center gap-1 rounded-md text-xs font-medium text-muted transition-colors hover:bg-white/10 hover:text-white active:scale-95"
+        >
+          <span>+5s</span>
+          <IconFastForward />
+        </button>
+      </div>
       <Button
         className={clsx("text-content", following && "border-accent hover:border-accent")}
         aria-pressed={following}

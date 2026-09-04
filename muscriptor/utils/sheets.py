@@ -330,6 +330,55 @@ def _retype_as_tablature(staff: ET.Element, preset: str, strings: int) -> None:
     ET.SubElement(staff_type, "lineDistance").text = _TAB_LINE_DISTANCE
 
 
+import io
+import mido
+from muscriptor.tokenizer.notes import Note
+from muscriptor.utils.tabs import generate_tab_and_chord_transcription
+
+
+def _write_tabs_text(midi_bytes: bytes, out_path: Path) -> Path:
+    try:
+        midi = mido.MidiFile(file=io.BytesIO(midi_bytes))
+        notes = []
+        tempo = 500000
+        for track in midi.tracks:
+            current_tick = 0
+            active_onsets: dict[tuple[int, int], float] = {}
+            for msg in track:
+                if msg.type == "set_tempo":
+                    tempo = msg.tempo
+                current_tick += msg.time
+                current_time = mido.tick2second(current_tick, midi.ticks_per_beat, tempo)
+                if msg.type == "note_on" and msg.velocity > 0:
+                    ch = getattr(msg, "channel", 0)
+                    is_drum = (ch == 9)
+                    program = 128 if is_drum else 0
+                    active_onsets[(ch, msg.note)] = current_time
+                elif (msg.type == "note_off") or (msg.type == "note_on" and msg.velocity == 0):
+                    ch = getattr(msg, "channel", 0)
+                    key = (ch, msg.note)
+                    if key in active_onsets:
+                        onset = active_onsets.pop(key)
+                        is_drum = (ch == 9)
+                        program = 128 if is_drum else 0
+                        notes.append(
+                            Note(
+                                is_drum=is_drum,
+                                program=program,
+                                onset=onset,
+                                offset=current_time,
+                                pitch=msg.note,
+                            )
+                        )
+        tab_text = generate_tab_and_chord_transcription(notes)
+    except Exception as e:
+        tab_text = f"Guitar tab transcription unavailable for this MIDI file ({e}).\n"
+
+    out_path.write_text(tab_text, encoding="utf-8")
+    return out_path
+
+
+
 def write_sheets(
     midi_bytes: bytes,
     out_dir: Path,
@@ -341,8 +390,8 @@ def write_sheets(
     Writes the MIDI, a MusicXML score, one PDF of the full score,
     and one PDF of standard notation per instrument. Guitar and bass parts
     additionally get a tablature PDF of their own, rendered from a second copy
-    of the score whose staves are retyped as tab. `out_dir` is created if it
-    does not exist.
+    of the score whose staves are retyped as tab. Also writes guitar_tabs_chords.txt.
+    `out_dir` is created if it does not exist.
 
     `quantized` says whether the notes are already snapped to a beat grid (by
     `muscriptor.utils.midi.quantized_notes`), which is what the engraving wants:
@@ -355,6 +404,11 @@ def write_sheets(
     midi_path = out_dir / "score.mid"
     midi_path.write_bytes(midi_bytes)
     written = [midi_path]
+
+    tab_text_path = out_dir / "guitar_tabs_chords.txt"
+    _write_tabs_text(midi_bytes, tab_text_path)
+    written.append(tab_text_path)
+
 
     with tempfile.TemporaryDirectory(prefix="muscriptor-sheets-") as tmp:
         tmp_dir = Path(tmp)

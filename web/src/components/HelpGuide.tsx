@@ -5,6 +5,35 @@ export function HelpGuide() {
 
   const sections = [
     {
+      id: "transport",
+      title: "🎛️ Full Audio Transport Controls & Keyboard Shortcuts",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Complete playback navigation controls and keyboard shortcuts:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>Go to Start of Song (0s):</strong> Jump directly to 0.0s using the <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏮</code> button or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">Home</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">K</code>.
+            </li>
+            <li>
+              <strong>Reverse / Rewind (-5s):</strong> Rewind playback 5 seconds using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏪ -5s</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">←</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">J</code>.
+            </li>
+            <li>
+              <strong>Play / Pause:</strong> Toggle audio playback using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">▶ Play</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏸ Pause</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">Space</code>.
+            </li>
+            <li>
+              <strong>Stop:</strong> Stop audio and reset playhead to start using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏹ Stop</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">Escape</code>.
+            </li>
+            <li>
+              <strong>Fast Forward (+5s):</strong> Jump forward 5 seconds using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">+5s ⏩</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">→</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">L</code>.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
       id: "pianoroll",
       title: "🎹 Interactive In-Browser Piano Roll Note Editing",
       badge: "NEW",

@@ -235,9 +235,11 @@ def test_write_sheets_writes_exactly_the_expected_files(tmp_path, monkeypatch):
         "01_electric_guitar_tab.pdf",
         "02_drum_kit.pdf",
         "full_score.pdf",
+        "guitar_tabs_chords.txt",
         "score.mid",
         "score.musicxml",
     ]
+
     assert sorted(p.name for p in written) == sorted(p.name for p in out.iterdir())
 
 

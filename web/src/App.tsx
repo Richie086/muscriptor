@@ -265,19 +265,31 @@ export function App() {
     };
   }, []);
 
-  // Space toggles play/pause on the transcribe screen. Ignored while focus is
-  // on a form control (slider, checkbox, button) so its native space behavior
-  // is preserved.
+  // Keyboard shortcuts for transport controls on the transcribe screen.
+  // Ignored while focus is on an editable form control.
   useEffect(() => {
     if (screen !== "transcribe") return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "Space" && e.key !== " ") return;
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA")
-        return;
-      e.preventDefault();
-      if (audio.state === "started") audio.pause();
-      else audio.play();
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (e.code === "Space" || e.key === " ") {
+        if (tag === "BUTTON") return;
+        e.preventDefault();
+        if (audio.state === "started") audio.pause();
+        else audio.play();
+      } else if (e.code === "Home" || e.key === "Home" || e.code === "KeyK") {
+        e.preventDefault();
+        audio.seek(0);
+      } else if (e.code === "ArrowLeft" || e.code === "KeyJ") {
+        e.preventDefault();
+        audio.seek(Math.max(0, audio.seconds - 5));
+      } else if (e.code === "ArrowRight" || e.code === "KeyL") {
+        e.preventDefault();
+        const dur = audio.duration || Infinity;
+        audio.seek(Math.min(dur, audio.seconds + 5));
+      } else if (e.code === "Escape" || e.key === "Escape") {
+        audio.stop();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

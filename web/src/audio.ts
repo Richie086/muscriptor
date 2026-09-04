@@ -33,7 +33,7 @@ const GM_PROGRAM: Record<string, number> = {
   timpani: 47,
   string_ensemble: 48,
   synth_strings: 50,
-  voice: 52,
+  voice: 50, // Synth Strings 1: synth string representing vocal track
   orchestra_hit: 55,
   trumpet: 56,
   trombone: 57,
