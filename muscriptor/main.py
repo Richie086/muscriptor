@@ -47,6 +47,8 @@ class OutputFormat(str, Enum):
     json = "json"
     jsonl = "jsonl"
     sheets = "sheets"
+    tabs = "tabs"
+
 
 
 def _transcribe(model, kwargs: dict, detect_tempo: str, quantize: bool = False):
@@ -278,6 +280,7 @@ def transcribe(
                 OutputFormat.midi: ".mid",
                 OutputFormat.json: ".json",
                 OutputFormat.jsonl: ".jsonl",
+                OutputFormat.tabs: "_tabs.txt",
             }[format]
             output = audio_file.with_suffix(suffix)
 
@@ -340,6 +343,21 @@ def transcribe(
         for path in written:
             typer.echo(f"  {path.name}", err=True)
         typer.echo(f"Saved {len(written)} files to {output}", err=True)
+    elif format == OutputFormat.tabs:
+        from muscriptor.utils.tabs import generate_tab_and_chord_transcription
+
+        events = [
+            e for e in model.transcribe(**kwargs) if not isinstance(e, ProgressEvent)
+        ]
+        grid = model.detect_beat_grid_for(audio_file, detect_tempo)
+        notes, _ = model.events_to_notes(events)
+        tab_text = generate_tab_and_chord_transcription(notes, beat_grid=grid)
+        if is_stdout:
+            sys.stdout.write(tab_text)
+            sys.stdout.flush()
+        else:
+            output.write_text(tab_text, encoding="utf-8")
+            typer.echo(f"Saved guitar tabs & chords to {output}", err=True)
     elif format == OutputFormat.midi:
         midi_bytes, _ = _transcribe(model, kwargs, detect_tempo)
         if is_stdout:

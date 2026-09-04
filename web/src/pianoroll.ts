@@ -273,6 +273,15 @@ export class PianoRoll {
     return this.notes;
   }
 
+  setNotes(notes: RollNote[]) {
+    this.notes = notes;
+    let maxStart = 0;
+    for (const n of notes) {
+      if (n.start > maxStart) maxStart = n.start;
+    }
+    this.latestNoteStart = maxStart;
+  }
+
   addNote(n: RollNote) {
     this.notes.push(n);
     // The transcribed frontier never lags behind the most recent note's onset.
@@ -363,6 +372,15 @@ export class PianoRoll {
   }
 
   private selectedNote: RollNote | null = null;
+  private gridStepSec: number = 0;
+
+  setGridStepSec(step: number) {
+    this.gridStepSec = step;
+  }
+
+  getGridStepSec(): number {
+    return this.gridStepSec;
+  }
 
   getSelectedNote(): RollNote | null {
     return this.selectedNote;
@@ -731,6 +749,21 @@ export class PianoRoll {
       ctx.moveTo(x + 0.5, 0);
       ctx.lineTo(x + 0.5, H);
       ctx.stroke();
+    }
+
+    if (this.gridStepSec > 0) {
+      const startT = Math.floor(offsetSec / this.gridStepSec) * this.gridStepSec;
+      const endT = offsetSec + viewSec;
+      ctx.strokeStyle = "rgba(79, 110, 247, 0.35)";
+      ctx.lineWidth = 1;
+      for (let t = startT; t <= endT; t += this.gridStepSec) {
+        const x = xAt(t);
+        if (x < KEY_WIDTH || x > W) continue;
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, H);
+        ctx.stroke();
+      }
     }
 
     // Transcribed-so-far overlay: a faint light wash over the [0, t) time span

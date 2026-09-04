@@ -138,6 +138,27 @@ export function ExportDialog(props: {
     }
   }
 
+  async function handleDownloadGuitarTabs() {
+    track("download", { format: "guitar_tabs_chords" });
+    setLoadingAudio(true);
+    try {
+      const midiToUse = result.quantizedMidi ?? result.midi;
+      const form = new FormData();
+      form.set("midi", midiToUse, "transcription.mid");
+
+      const res = await fetch("/tabs", {
+        method: "POST",
+        body: form,
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      saveBlob(blob, `${stem}_guitar_tabs_chords.txt`);
+    } finally {
+      setLoadingAudio(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(11,12,16,0.72)] p-6 backdrop-blur-sm"
@@ -298,26 +319,48 @@ export function ExportDialog(props: {
             <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-muted">
               🎸 Guitar Tabs & Sheet Music
             </h4>
-            <div className="rounded-card border border-line bg-surface-raised p-4 flex items-center justify-between gap-4">
-              <div>
-                <h5 className="m-0 text-sm font-semibold text-content">
-                  Engraved PDFs, MusicXML & Guitar Tablature
-                </h5>
-                <p className="m-0 text-xs text-muted mt-0.5">
-                  Generates full score PDFs, standard notation per instrument, and guitar/bass tab staves via MuseScore.
-                </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-card border border-line bg-surface-raised p-4 flex flex-col justify-between">
+                <div>
+                  <h5 className="m-0 text-sm font-semibold text-content">
+                    Guitar Tabs & Chord Chart
+                  </h5>
+                  <p className="m-0 text-xs text-muted mt-1">
+                    ASCII 6-string tab & detected chords (Root, triad, 7th) formatted per measure.
+                  </p>
+                </div>
+                <Button
+                  kind="secondary"
+                  disabled={loadingAudio}
+                  className="mt-3 inline-flex items-center justify-center gap-2"
+                  onClick={handleDownloadGuitarTabs}
+                >
+                  <IconDownload />
+                  Download Guitar Tabs (.txt)
+                </Button>
               </div>
-              <Button
-                kind="primary"
-                className="inline-flex shrink-0 items-center gap-2"
-                onClick={() => {
-                  onClose();
-                  onOpenSheets();
-                }}
-              >
-                <IconDownload />
-                Open Sheet Music Engraver
-              </Button>
+
+              <div className="rounded-card border border-line bg-surface-raised p-4 flex flex-col justify-between">
+                <div>
+                  <h5 className="m-0 text-sm font-semibold text-content">
+                    Engraved PDFs & MusicXML
+                  </h5>
+                  <p className="m-0 text-xs text-muted mt-1">
+                    Full score PDFs, per-instrument notation, and engraved tab staves via MuseScore.
+                  </p>
+                </div>
+                <Button
+                  kind="primary"
+                  className="mt-3 inline-flex items-center justify-center gap-2"
+                  onClick={() => {
+                    onClose();
+                    onOpenSheets();
+                  }}
+                >
+                  <IconDownload />
+                  Sheet Music Engraver
+                </Button>
+              </div>
             </div>
           </div>
         </div>

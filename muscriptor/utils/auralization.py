@@ -157,13 +157,44 @@ def _synthesize_midi(midi_path: Path, soundfont_path: Path) -> np.ndarray:
             os.remove(synth_tmp)
 
 
+def quantize_8bit(audio: np.ndarray, bits: int = 8, downsample_factor: int = 4) -> np.ndarray:
+    """Quantize audio array to low-resolution N-bit levels and reduce sample rate for retro 8-bit sound."""
+    if len(audio) == 0:
+        return audio
+
+    levels = 2 ** bits
+    max_val = float(np.max(np.abs(audio)))
+    if max_val > 1e-6:
+        norm_audio = audio / max_val
+    else:
+        norm_audio = audio
+
+    quantized = np.round((norm_audio + 1.0) * (levels / 2.0 - 0.5)) / (levels / 2.0 - 0.5) - 1.0
+
+    if downsample_factor > 1:
+        reduced = np.repeat(quantized[::downsample_factor], downsample_factor)
+        if len(reduced) < len(quantized):
+            reduced = np.pad(reduced, (0, len(quantized) - len(reduced)), mode="edge")
+        else:
+            reduced = reduced[: len(quantized)]
+        quantized = reduced
+
+    if max_val > 1e-6:
+        quantized = quantized * max_val
+
+    return quantized.astype(np.float32)
+
+
 def synthesize(
     midi_path: str | Path,
     output_path: str | Path,
     soundfont_path: str | Path | None = None,
+    eight_bit: bool = False,
 ) -> None:
     soundfont = _resolve_soundfont(soundfont_path)
     synth_audio = _synthesize_midi(Path(midi_path), soundfont)
+    if eight_bit:
+        synth_audio = quantize_8bit(synth_audio)
     sf.write(str(output_path), synth_audio, _SAMPLE_RATE)
 
 
@@ -172,6 +203,7 @@ def auralize(
     original_audio_path: str | Path,
     output_path: str | Path,
     soundfont_path: str | Path | None = None,
+    eight_bit: bool = False,
 ) -> None:
     original_audio_path = Path(original_audio_path)
     output_path = Path(output_path)
@@ -193,6 +225,10 @@ def auralize(
     rms_synth = np.sqrt(np.mean(synth_audio**2))
     if rms_synth > 1e-8:
         synth_audio = synth_audio * (rms_orig / rms_synth)
+
+    if eight_bit:
+        synth_audio = quantize_8bit(synth_audio)
+        original_audio = quantize_8bit(original_audio)
 
     stereo = np.stack([original_audio, synth_audio], axis=1)
     sf.write(str(output_path), stereo, _SAMPLE_RATE)

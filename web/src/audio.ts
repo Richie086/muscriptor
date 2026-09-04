@@ -33,7 +33,7 @@ const GM_PROGRAM: Record<string, number> = {
   timpani: 47,
   string_ensemble: 48,
   synth_strings: 50,
-  voice: 52,
+  voice: 50, // Synth Strings 1: synth string representing vocal track
   orchestra_hit: 55,
   trumpet: 56,
   trombone: 57,
@@ -99,6 +99,65 @@ export class AudioEngine {
   private mix = 0.75; // 0 = full WAV, 1 = full MIDI
   /** When true: original audio hard-left, synthesis hard-right (mix ignored). */
   private stereo = false;
+  private eightBitNode: WaveShaperNode | null = null;
+  private isEightBit = false;
+  private chipPulseSynth: Tone.PolySynth | null = null;
+  private chipTriangleSynth: Tone.PolySynth | null = null;
+  private chipNoiseSynth: Tone.NoiseSynth | null = null;
+
+  private initChiptuneSynths() {
+    if (this.chipPulseSynth) return;
+    const dest = this.eightBitNode || this.midiGain;
+    this.chipPulseSynth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "square" },
+      envelope: { attack: 0.005, decay: 0.05, sustain: 0.7, release: 0.05 },
+    }).connect(dest);
+
+    this.chipTriangleSynth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "triangle" },
+      envelope: { attack: 0.005, decay: 0.05, sustain: 0.9, release: 0.08 },
+    }).connect(dest);
+
+    this.chipNoiseSynth = new Tone.NoiseSynth({
+      noise: { type: "white" },
+      envelope: { attack: 0.001, decay: 0.1, sustain: 0 },
+    }).connect(dest);
+  }
+
+  setEightBitMode(enabled: boolean) {
+    this.isEightBit = enabled;
+    if (!this.eightBitNode) {
+      this.eightBitNode = this.ctx.createWaveShaper();
+      const n = 256;
+      const curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = (i / (n - 1)) * 2 - 1;
+        // Step quantization to 8-bit resolution (256 discrete levels)
+        curve[i] = Math.round(x * 128) / 128;
+      }
+      this.eightBitNode.curve = curve;
+      this.eightBitNode.oversample = "none";
+    }
+    this.initChiptuneSynths();
+
+    try {
+      this.midiGain.disconnect();
+      this.eightBitNode.disconnect();
+    } catch {
+      // Ignore disconnect errors if not connected
+    }
+
+    if (enabled) {
+      this.midiGain.connect(this.eightBitNode);
+      this.eightBitNode.connect(this.midiPanner);
+    } else {
+      this.midiGain.connect(this.midiPanner);
+    }
+  }
+
+  getEightBitMode(): boolean {
+    return this.isEightBit;
+  }
 
   constructor() {
     // Tone.getContext() lazily creates a (suspended) AudioContext — no user
@@ -328,6 +387,22 @@ export class AudioEngine {
   }
 
   private scheduleNoteRaw(opts: NoteOpts) {
+    if (this.isEightBit) {
+      this.initChiptuneSynths();
+      const duration = Math.max(0.05, opts.end - opts.start);
+      Tone.getTransport().scheduleOnce((time) => {
+        const freq = Tone.Frequency(opts.pitch, "midi").toFrequency();
+        if (opts.instrument === "drums") {
+          this.chipNoiseSynth?.triggerAttackRelease(duration, time);
+        } else if (opts.instrument.includes("bass")) {
+          this.chipTriangleSynth?.triggerAttackRelease(freq, duration, time);
+        } else {
+          this.chipPulseSynth?.triggerAttackRelease(freq, duration, time);
+        }
+      }, opts.start);
+      return;
+    }
+
     if (!this.synth) {
       this.pendingNotes.push(opts);
       return;
@@ -446,6 +521,18 @@ export class AudioEngine {
 
   /** Play a short preview of a single pitch for audio editing feedback. */
   previewPitch(instrument: string, pitch: number, duration = 0.25) {
+    if (this.isEightBit) {
+      this.initChiptuneSynths();
+      const freq = Tone.Frequency(pitch, "midi").toFrequency();
+      if (instrument === "drums") {
+        this.chipNoiseSynth?.triggerAttackRelease(duration);
+      } else if (instrument.includes("bass")) {
+        this.chipTriangleSynth?.triggerAttackRelease(freq, duration);
+      } else {
+        this.chipPulseSynth?.triggerAttackRelease(freq, duration);
+      }
+      return;
+    }
     if (!this.synth) return;
     const ch = this.channelFor(instrument);
     this.synth.noteOn(ch, pitch, NOTE_VELOCITY);

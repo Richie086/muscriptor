@@ -345,6 +345,9 @@ def note_event2midi(
                     ne_channel = 15
                 name = program_names.get(key, f"program {key}")
                 gm_program = ne.program
+                # Vocal track is represented using a synth string (GM 50)
+                if gm_program in (52, 53, 54) or (isinstance(name, str) and name.lower().strip() == "voice"):
+                    gm_program = 50
             program_to_channel[key] = ne_channel
             track.append(MetaMessage("track_name", name=name, time=0))
             # MuseScore ignores set_tempo in a conductor track that has no notes,

@@ -5,6 +5,35 @@ export function HelpGuide() {
 
   const sections = [
     {
+      id: "transport",
+      title: "🎛️ Full Audio Transport Controls & Keyboard Shortcuts",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Complete playback navigation controls and keyboard shortcuts:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>Go to Start of Song (0s):</strong> Jump directly to 0.0s using the <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏮</code> button or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">Home</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">K</code>.
+            </li>
+            <li>
+              <strong>Reverse / Rewind (-5s):</strong> Rewind playback 5 seconds using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏪ -5s</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">←</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">J</code>.
+            </li>
+            <li>
+              <strong>Play / Pause:</strong> Toggle audio playback using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">▶ Play</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏸ Pause</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">Space</code>.
+            </li>
+            <li>
+              <strong>Stop:</strong> Stop audio and reset playhead to start using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">⏹ Stop</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">Escape</code>.
+            </li>
+            <li>
+              <strong>Fast Forward (+5s):</strong> Jump forward 5 seconds using <code className="rounded bg-surface px-1.5 py-0.5 text-accent">+5s ⏩</code> or press <code className="rounded bg-surface px-1.5 py-0.5 text-accent">→</code> / <code className="rounded bg-surface px-1.5 py-0.5 text-accent">L</code>.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
       id: "pianoroll",
       title: "🎹 Interactive In-Browser Piano Roll Note Editing",
       badge: "NEW",
@@ -28,6 +57,32 @@ export function HelpGuide() {
             </li>
             <li>
               <strong>Live Audio Feedback:</strong> Interactively preview pitch changes with soundfont audio synthesis while dragging.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: "quantization",
+      title: "⏱️ Live Quantization & Grid Snap Controls",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Align notes automatically to musical subdivisions with interactive grid snap controls:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>Selectable Grid Divisions:</strong> Choose from <code className="text-accent">1/4</code>, <code className="text-accent">1/8</code>, <code className="text-accent">1/16</code>, <code className="text-accent">1/32</code>, or triplet subdivisions (<code className="text-accent">1/8t</code>, <code className="text-accent">1/16t</code>).
+            </li>
+            <li>
+              <strong>Live Drag Snapping:</strong> When grid snap is active, moving note start/end boundaries automatically snaps to the nearest grid step.
+            </li>
+            <li>
+              <strong>Visual Grid Lines:</strong> Dynamic accent grid lines render over the canvas to visualize note alignment.
+            </li>
+            <li>
+              <strong>Batch Quantization:</strong> Click <strong>✨ Quantize All</strong> to instantly snap the entire transcription to the chosen BPM and grid division.
             </li>
           </ul>
         </div>
@@ -68,6 +123,29 @@ export function HelpGuide() {
             </li>
             <li>
               <strong>Robust Decoding:</strong> Built-in multi-backend fallback system (PyAV, soundfile, ffmpeg, torchaudio) ensuring your files always decode cleanly.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: "eightbit",
+      title: "👾 8-Bit Retro Low-Resolution Synthesis",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Transform audio output into low-resolution, authentic 8-bit chiptune sound:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>8-Bit Quantization:</strong> Discretizes audio amplitude to 256 levels (8-bit PCM) for true retro arcade sound.
+            </li>
+            <li>
+              <strong>Sample-Rate Downsampling:</strong> Emulates 11kHz retro soundcard playback with step-hold sample reduction.
+            </li>
+            <li>
+              <strong>Live WebAudio Bitcrushing:</strong> Toggle <code className="text-accent">👾 8-Bit Retro</code> in the top player toolbar for real-time retro synthesis.
             </li>
           </ul>
         </div>

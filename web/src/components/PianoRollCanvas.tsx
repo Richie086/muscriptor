@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from "react";
 import { type AudioEngine, INSTRUMENT_ORDER } from "../audio";
 import { PianoRoll, KEY_WIDTH, type RollNote } from "../pianoroll";
+import { type GridDivision, getGridInterval, snapTime, quantizeNotes } from "../quantization";
 
 export function PianoRollCanvas(props: {
   rollRef: RefObject<PianoRoll | null>;
@@ -13,6 +14,26 @@ export function PianoRollCanvas(props: {
   const [editTool, setEditTool] = useState<"select" | "add" | "scrub">("select");
   const [selectedInstrument, setSelectedInstrument] = useState<string>("acoustic_piano");
   const [selectedNote, setSelectedNote] = useState<RollNote | null>(null);
+
+  const [gridDivision, setGridDivision] = useState<GridDivision>("off");
+  const [bpm, setBpm] = useState<number>(120);
+
+  const gridStepSec = getGridInterval(gridDivision, bpm);
+
+  useEffect(() => {
+    if (rollRef.current) {
+      rollRef.current.setGridStepSec(gridStepSec);
+    }
+  }, [gridStepSec, rollRef]);
+
+  const handleQuantizeAll = () => {
+    const roll = rollRef.current;
+    if (!roll || gridStepSec <= 0) return;
+    const currentNotes = roll.getNotes();
+    const quantized = quantizeNotes(currentNotes, gridStepSec);
+    roll.setNotes(quantized);
+    audio.reloadNotes(quantized);
+  };
 
   const handleDeleteSelected = () => {
     const roll = rollRef.current;
@@ -87,11 +108,14 @@ export function PianoRollCanvas(props: {
 
       if (editTool === "add" && !hit) {
         const pitch = roll.yToPitch(y);
-        const start = roll.xToSeconds(x);
+        const rawStart = roll.xToSeconds(x);
+        const step = roll.getGridStepSec();
+        const start = step > 0 ? snapTime(rawStart, step) : rawStart;
+        const dur = step > 0 ? Math.max(step, 0.25) : 0.25;
         const newNote: RollNote = {
           pitch,
           start,
-          end: start + 0.25,
+          end: start + dur,
           instrument: selectedInstrument,
         };
         roll.addNote(newNote);
@@ -139,6 +163,7 @@ export function PianoRollCanvas(props: {
       if (noteDrag) {
         const dx = e.clientX - noteDrag.startX;
         const dt = dx / roll.pxPerSec;
+        const step = roll.getGridStepSec();
 
         if (noteDrag.hitArea === "body") {
           const newPitch = roll.yToPitch(y);
@@ -147,12 +172,16 @@ export function PianoRollCanvas(props: {
             audio.previewPitch(noteDrag.note.instrument, newPitch);
           }
           const dur = noteDrag.origEnd - noteDrag.origStart;
-          noteDrag.note.start = Math.max(0, noteDrag.origStart + dt);
-          noteDrag.note.end = noteDrag.note.start + dur;
+          const rawStart = Math.max(0, noteDrag.origStart + dt);
+          const start = step > 0 ? snapTime(rawStart, step) : rawStart;
+          noteDrag.note.start = start;
+          noteDrag.note.end = start + dur;
         } else if (noteDrag.hitArea === "start") {
-          noteDrag.note.start = Math.max(0, Math.min(noteDrag.origEnd - 0.05, noteDrag.origStart + dt));
+          const rawStart = Math.max(0, Math.min(noteDrag.origEnd - 0.05, noteDrag.origStart + dt));
+          noteDrag.note.start = step > 0 ? snapTime(rawStart, step) : rawStart;
         } else if (noteDrag.hitArea === "end") {
-          noteDrag.note.end = Math.max(noteDrag.note.start + 0.05, noteDrag.origEnd + dt);
+          const rawEnd = Math.max(noteDrag.note.start + 0.05, noteDrag.origEnd + dt);
+          noteDrag.note.end = step > 0 ? snapTime(rawEnd, step) : rawEnd;
         }
         setSelectedNote({ ...noteDrag.note });
         return;
@@ -319,6 +348,48 @@ export function PianoRollCanvas(props: {
           >
             📍 Scrub
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-l border-line pl-3">
+          <span className="text-muted text-xs uppercase tracking-wider font-semibold">Grid Snap:</span>
+          <select
+            value={gridDivision}
+            onChange={(e) => setGridDivision(e.target.value as GridDivision)}
+            className="rounded border border-line bg-surface px-2 py-1 text-content focus:border-accent focus:outline-none"
+          >
+            <option value="off">Off</option>
+            <option value="1/4">1/4 Note</option>
+            <option value="1/8">1/8 Note</option>
+            <option value="1/16">1/16 Note</option>
+            <option value="1/32">1/32 Note</option>
+            <option value="1/8t">1/8 Triplet</option>
+            <option value="1/16t">1/16 Triplet</option>
+          </select>
+
+          {gridDivision !== "off" && (
+            <>
+              <div className="flex items-center gap-1">
+                <span className="text-muted text-xs">BPM:</span>
+                <input
+                  type="number"
+                  min={30}
+                  max={300}
+                  value={bpm}
+                  onChange={(e) => setBpm(Math.max(30, Math.min(300, parseInt(e.target.value) || 120)))}
+                  className="w-16 rounded border border-line bg-surface px-2 py-1 text-content font-mono focus:border-accent focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleQuantizeAll}
+                className="rounded bg-accent/20 border border-accent/40 px-2.5 py-1 font-medium text-accent hover:bg-accent hover:text-white transition"
+                title="Quantize all notes to the selected grid snap division"
+              >
+                ✨ Quantize All
+              </button>
+            </>
+          )}
         </div>
 
         {editTool === "add" && (
