@@ -78,5 +78,5 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY --from=web-builder /muscriptor/web_dist ./muscriptor/web_dist
 
 
-EXPOSE 8000
-ENTRYPOINT ["uv", "run", "muscriptor", "serve", "--host", "0.0.0.0"]
+EXPOSE 8222
+ENTRYPOINT ["uv", "run", "muscriptor", "serve", "--host", "0.0.0.0", "--port", "8222", "--device", "cpu"]
