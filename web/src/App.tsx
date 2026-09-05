@@ -107,6 +107,10 @@ export function App() {
   const appStateRef = useRef(appState);
   appStateRef.current = appState;
 
+  useEffect(() => {
+    audio.setBeatGrid(result?.beatGrid ?? null);
+  }, [result?.beatGrid, audio]);
+
   const { transcribe, abort } = useTranscription({
     audio,
     rollRef,
