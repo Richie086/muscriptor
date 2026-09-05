@@ -34,6 +34,32 @@ export function HelpGuide() {
       ),
     },
     {
+      id: "accompaniment",
+      title: "🥁 Aligned Rock Drum Beat & Metronome Click Track",
+      badge: "NEW",
+      content: (
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Generate and play back synchronized rhythm accompaniments aligned to the song's detected BPM and downbeat meter:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-content">
+            <li>
+              <strong>🥁 Rock Beat Mode:</strong> Plays a classic rock groove with Kick on beats 1 & 3, Snare on beats 2 & 4, and dynamic 8th-note Hi-Hats.
+            </li>
+            <li>
+              <strong>⏱️ Click Track Mode:</strong> Metronome click with an accented high woodblock on the primary downbeat (beat 1) and standard pulses on subsequent beats.
+            </li>
+            <li>
+              <strong>Live Transport Toggle:</strong> Click the <code className="rounded bg-surface px-1.5 py-0.5 text-accent">🥁 Drums</code> button in the transport bar to cycle between <em>Off</em>, <em>Rock Beat</em>, and <em>Click Track</em>.
+            </li>
+            <li>
+              <strong>MIDI Stems & Export Hub:</strong> Export isolated accompaniment MIDIs on General MIDI percussion Channel 10 directly from the Export Hub modal.
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+    {
       id: "pianoroll",
       title: "🎹 Interactive In-Browser Piano Roll Note Editing",
       badge: "NEW",

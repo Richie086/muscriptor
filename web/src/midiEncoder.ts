@@ -31,15 +31,17 @@ export function createMidiFile(
     type: "on" | "off";
     pitch: number;
     velocity: number;
+    channel: number;
   };
 
   const events: Event[] = [];
 
   for (const note of notes) {
+    const channel = note.instrument === "drums" ? 9 : 0;
     const startTick = Math.max(0, Math.round(note.start * ticksPerSecond));
     const endTick = Math.max(startTick + 1, Math.round(note.end * ticksPerSecond));
-    events.push({ tick: startTick, type: "on", pitch: note.pitch, velocity: 100 });
-    events.push({ tick: endTick, type: "off", pitch: note.pitch, velocity: 0 });
+    events.push({ tick: startTick, type: "on", pitch: note.pitch, velocity: 100, channel });
+    events.push({ tick: endTick, type: "off", pitch: note.pitch, velocity: 0, channel });
   }
 
   // Sort events chronologically. If ticks are equal, Note Off comes before Note On.
@@ -73,7 +75,8 @@ export function createMidiFile(
     lastTick = ev.tick;
     trackBytes.push(...encodeVLQ(delta));
 
-    const status = ev.type === "on" ? 0x90 : 0x80;
+    const baseStatus = ev.type === "on" ? 0x90 : 0x80;
+    const status = baseStatus | (ev.channel & 0x0f);
     const pitch = Math.max(0, Math.min(127, Math.round(ev.pitch)));
     trackBytes.push(status, pitch, ev.velocity);
   }

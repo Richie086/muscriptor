@@ -1,6 +1,8 @@
 import * as Tone from "tone";
 import { WorkletSynthesizer } from "spessasynth_lib";
 import workletUrl from "spessasynth_lib/dist/spessasynth_processor.min.js?url";
+import { generateDrumTrack, type AccompanimentStyle } from "./drumGenerator";
+import type { BeatGrid } from "./pianoroll";
 
 /**
  * Playback goes through spessasynth_lib, a full SoundFont synthesizer running
@@ -86,6 +88,9 @@ export class AudioEngine {
   private nextChannel = 0;
   /** All notes ever scheduled — kept so Play-from-0 can re-schedule them. */
   private allNotes: NoteOpts[] = [];
+  private accompanimentMode: AccompanimentStyle = "off";
+  private accompanimentNotes: NoteOpts[] = [];
+  private beatGrid: BeatGrid | null = null;
   private autoStopAt: number | null = null;
   /** Decoded original audio + live playback node, for the WAV/MIDI mix. */
   private wavBuffer: AudioBuffer | null = null;
@@ -393,7 +398,11 @@ export class AudioEngine {
       Tone.getTransport().scheduleOnce((time) => {
         const freq = Tone.Frequency(opts.pitch, "midi").toFrequency();
         if (opts.instrument === "drums") {
-          this.chipNoiseSynth?.triggerAttackRelease(duration, time);
+          if (opts.pitch === 36 || opts.pitch === 76 || opts.pitch === 77) {
+            this.chipTriangleSynth?.triggerAttackRelease(freq, duration, time);
+          } else {
+            this.chipNoiseSynth?.triggerAttackRelease(duration, time);
+          }
         } else if (opts.instrument.includes("bass")) {
           this.chipTriangleSynth?.triggerAttackRelease(freq, duration, time);
         } else {
@@ -433,6 +442,7 @@ export class AudioEngine {
     if (t.seconds < 0.001) {
       t.cancel();
       for (const n of this.allNotes) this.scheduleNoteRaw(n);
+      for (const n of this.accompanimentNotes) this.scheduleNoteRaw(n);
       if (this.autoStopAt !== null) this.scheduleStopRaw(this.autoStopAt);
     }
     t.start();
@@ -455,6 +465,9 @@ export class AudioEngine {
     t.cancel();
     t.seconds = target;
     for (const n of this.allNotes) {
+      if (n.start >= target) this.scheduleNoteRaw(n);
+    }
+    for (const n of this.accompanimentNotes) {
       if (n.start >= target) this.scheduleNoteRaw(n);
     }
     if (this.autoStopAt !== null && this.autoStopAt > target) {
@@ -484,6 +497,7 @@ export class AudioEngine {
   reset() {
     this.stop();
     this.allNotes = [];
+    this.accompanimentNotes = [];
     this.pendingNotes = [];
     this.autoStopAt = null;
     this.stopWavSource();
@@ -525,7 +539,12 @@ export class AudioEngine {
       this.initChiptuneSynths();
       const freq = Tone.Frequency(pitch, "midi").toFrequency();
       if (instrument === "drums") {
-        this.chipNoiseSynth?.triggerAttackRelease(duration);
+        if (pitch === 36 || pitch === 76 || pitch === 77) {
+          this.chipTriangleSynth?.triggerAttackRelease(freq, duration);
+        } else {
+          this.chipNoiseSynth?.triggerAttackRelease(duration);
+        }
+        return;
       } else if (instrument.includes("bass")) {
         this.chipTriangleSynth?.triggerAttackRelease(freq, duration);
       } else {
@@ -544,6 +563,47 @@ export class AudioEngine {
   /** Reload note list after user edits and re-sync transport schedule. */
   reloadNotes(notes: NoteOpts[]) {
     this.allNotes = notes.map((n) => ({ ...n }));
+    if (this.accompanimentMode !== "off") {
+      this.refreshAccompaniment();
+    } else {
+      this.seek(this.seconds);
+    }
+  }
+
+  setBeatGrid(grid: BeatGrid | null) {
+    this.beatGrid = grid;
+    if (this.accompanimentMode !== "off") {
+      this.refreshAccompaniment();
+    }
+  }
+
+  setAccompaniment(mode: AccompanimentStyle) {
+    this.accompanimentMode = mode;
+    this.refreshAccompaniment();
+  }
+
+  getAccompaniment(): AccompanimentStyle {
+    return this.accompanimentMode;
+  }
+
+  private refreshAccompaniment() {
+    if (this.accompanimentMode === "off") {
+      this.accompanimentNotes = [];
+    } else {
+      const maxEnd = this.allNotes.length > 0 ? Math.max(...this.allNotes.map((n) => n.end)) : 0;
+      const totalDur = Math.max(this.duration, maxEnd);
+      if (totalDur > 0) {
+        const drumRollNotes = generateDrumTrack(this.beatGrid, totalDur, this.accompanimentMode);
+        this.accompanimentNotes = drumRollNotes.map((n) => ({
+          instrument: n.instrument,
+          pitch: n.pitch,
+          start: n.start,
+          end: n.end,
+        }));
+      } else {
+        this.accompanimentNotes = [];
+      }
+    }
     this.seek(this.seconds);
   }
 
