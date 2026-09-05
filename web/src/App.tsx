@@ -19,6 +19,7 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { Faq } from "./components/Faq";
 import { HelpGuide } from "./components/HelpGuide";
+import { DebugPanel } from "./components/DebugPanel";
 import { detectChordAtTime } from "./chordDetector";
 import { track } from "./analytics";
 
@@ -92,6 +93,7 @@ export function App() {
   const [userScrolled, setUserScrolled] = useState(false);
   const [condSelected, setCondSelected] = useState<Set<string>>(() => new Set());
   const [exportHubOpen, setExportHubOpen] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   // True while a file is being dragged over the window. On the welcome screen
   // this swaps the panel's prompt in place instead of showing the overlay.
   const [dragging, setDragging] = useState(false);
@@ -456,7 +458,19 @@ export function App() {
                 setUserScrolled(true);
               }
             }}
+            showDebug={showDebugPanel}
+            onToggleDebug={() => setShowDebugPanel((prev) => !prev)}
           />
+
+          {showDebugPanel && (
+            <div className="col-span-full animate-rise">
+              <DebugPanel
+                notes={rollRef.current?.getNotes() ?? []}
+                seconds={audio.seconds}
+                onClose={() => setShowDebugPanel(false)}
+              />
+            </div>
+          )}
 
           <PianoRollCanvas rollRef={rollRef} audio={audio} setUserScrolled={setUserScrolled} />
 

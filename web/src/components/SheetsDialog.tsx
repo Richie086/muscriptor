@@ -80,6 +80,24 @@ export function SheetsDialog(props: {
           <h2 className="m-0 text-base font-semibold text-content">Download sheet music</h2>
         </div>
 
+        {/* Recommended Software Banner */}
+        <div className="border-b border-line bg-accent/15 px-5 py-3 text-xs text-content flex items-start gap-2.5">
+          <span className="text-base leading-none">🎼</span>
+          <div>
+            <span className="font-semibold text-accent-light">Recommended Notation Software:</span>{" "}
+            We recommend using{" "}
+            <a
+              href="https://musescore.org/en"
+              target="_blank"
+              rel="noreferrer"
+              className="font-bold text-accent underline underline-offset-2 hover:text-accent-light"
+            >
+              MuseScore (https://musescore.org/en)
+            </a>
+            , which is available for Mac, Linux, and Windows and is free and open source.
+          </div>
+        </div>
+
         {!quantized && (
           <div className="border-b border-line bg-accent-2/10 px-5 py-3 text-[13px] text-accent-2">
             We couldn't find a steady beat in this recording, so the bar lines are guesses.

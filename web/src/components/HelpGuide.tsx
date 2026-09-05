@@ -105,6 +105,18 @@ export function HelpGuide() {
               <strong>Multi-Format Export Hub:</strong> Download full scores, per-instrument MIDI tracks, raw WAV, and MusicXML files for MuseScore / Sibelius / Guitar Pro.
             </li>
           </ul>
+          <div className="mt-3 rounded border border-accent/30 bg-accent/10 p-3 text-xs text-content">
+            <strong>🎼 Recommended Score Editor:</strong> We recommend using{" "}
+            <a
+              href="https://musescore.org/en"
+              target="_blank"
+              rel="noreferrer"
+              className="font-bold text-accent underline hover:text-accent-light"
+            >
+              MuseScore (https://musescore.org/en)
+            </a>{" "}
+            to view, edit, and play your exported sheet music, MusicXML, and MIDI files. MuseScore is free, open source, and available for Mac, Linux, and Windows.
+          </div>
         </div>
       ),
     },

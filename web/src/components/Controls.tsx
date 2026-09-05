@@ -24,9 +24,22 @@ export function Controls(props: {
   /** Whether the roll auto-follows the playhead (toggled off by manual scrolling). */
   following: boolean;
   onToggleFollow: () => void;
+  showDebug: boolean;
+  onToggleDebug: () => void;
 }) {
-  const { audio, clockRef, chordRef, mix, onMixChange, stereo, onStereoChange, following, onToggleFollow } =
-    props;
+  const {
+    audio,
+    clockRef,
+    chordRef,
+    mix,
+    onMixChange,
+    stereo,
+    onStereoChange,
+    following,
+    onToggleFollow,
+    showDebug,
+    onToggleDebug,
+  } = props;
   // The transport's state isn't React state (and it can auto-stop at the end),
   // so poll it each frame to keep the toggle button's label in sync.
   const [playing, setPlaying] = useState(false);
@@ -163,6 +176,20 @@ export function Controls(props: {
         }}
       >
         Follow playhead
+      </Button>
+      <Button
+        className={clsx(
+          "text-content transition-all",
+          showDebug && "border-emerald-500/60 bg-emerald-500/15 text-emerald-300 shadow-sm",
+        )}
+        aria-pressed={showDebug}
+        title="Toggle Real-Time Model Thinking & Debug Telemetry Panel"
+        onClick={(e) => {
+          e.currentTarget.blur();
+          onToggleDebug();
+        }}
+      >
+        🧠 Model Debug
       </Button>
       <Button
         className="text-content hover:text-white"

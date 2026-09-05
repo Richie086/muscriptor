@@ -211,6 +211,24 @@ export function ExportDialog(props: {
 
         {/* Export Options Grid */}
         <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6">
+          {/* MuseScore Recommendation Banner */}
+          <div className="rounded-card border border-accent/30 bg-accent/10 p-3.5 text-xs text-content flex items-start gap-3">
+            <span className="text-lg leading-none">🎼</span>
+            <div>
+              <span className="font-semibold text-accent-light">Recommended Notation Software:</span>{" "}
+              We recommend using{" "}
+              <a
+                href="https://musescore.org/en"
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-accent underline underline-offset-2 hover:text-accent-light"
+              >
+                MuseScore (https://musescore.org/en)
+              </a>
+              , which is free, open source, and available for Mac, Linux, and Windows.
+            </div>
+          </div>
+
           {/* MIDI Files */}
           <div>
             <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-muted">
