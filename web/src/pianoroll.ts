@@ -249,6 +249,11 @@ export class PianoRoll {
   private contentDuration = 0;
   /** Detected beat grid; null until the final `midi` event arrives (then: seconds grid). */
   private beatGrid: BeatGrid | null = null;
+  private currentChordName = "";
+
+  setCurrentChord(chordName: string) {
+    this.currentChordName = chordName;
+  }
 
   get pxPerSec(): number {
     return this._pxPerSec;
@@ -836,7 +841,7 @@ export class PianoRoll {
     }
     ctx.globalAlpha = 1;
 
-    // Playhead
+    // Playhead & Real-Time Chord Badge
     const px = KEY_WIDTH + (this.playhead - offsetSec) * pxPerSec;
     ctx.strokeStyle = palette().playhead;
     ctx.lineWidth = 2;
@@ -844,6 +849,21 @@ export class PianoRoll {
     ctx.moveTo(px, 0);
     ctx.lineTo(px, H);
     ctx.stroke();
+
+    if (this.currentChordName && px >= KEY_WIDTH && px <= W) {
+      ctx.font = "bold 11px sans-serif";
+      const textW = ctx.measureText(this.currentChordName).width;
+      const boxW = Math.max(38, textW + 14);
+      const boxX = Math.min(Math.max(KEY_WIDTH + 2, px - boxW / 2), W - boxW - 4);
+      ctx.fillStyle = "rgba(79, 110, 247, 0.9)";
+      ctx.beginPath();
+      ctx.roundRect(boxX, 6, boxW, 20, 4);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.fillText(this.currentChordName, boxX + boxW / 2, 20);
+      ctx.textAlign = "left";
+    }
 
     ctx.restore();
 

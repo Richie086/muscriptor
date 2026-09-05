@@ -19,6 +19,7 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { Faq } from "./components/Faq";
 import { HelpGuide } from "./components/HelpGuide";
+import { detectChordAtTime } from "./chordDetector";
 import { track } from "./analytics";
 
 /**
@@ -66,6 +67,7 @@ export function App() {
   const audio = useAudioEngine();
   const rollRef = useRef<PianoRoll | null>(null);
   const clockRef = useRef<HTMLSpanElement | null>(null);
+  const chordRef = useRef<HTMLSpanElement | null>(null);
   // Progress estimator (stable across renders) + the DOM nodes its smoothed
   // fraction/ETA are written into each frame.
   const progressRef = useRef<ProgressEstimator | null>(null);
@@ -319,6 +321,14 @@ export function App() {
               : null,
           );
         roll.render();
+
+        // Calculate real-time active chord approximation
+        const activeChord = detectChordAtTime(roll.getNotes(), audio.seconds);
+        roll.setCurrentChord(activeChord.name !== "N.C." ? activeChord.name : "");
+        if (chordRef.current) {
+          chordRef.current.textContent = activeChord.name;
+        }
+
         // The roll re-engages follow mode on its own when the user scrolls back
         // to the live transcription frontier and holds still — mirror that into
         // the follow toggle's state.
@@ -425,6 +435,7 @@ export function App() {
           <Controls
             audio={audio}
             clockRef={clockRef}
+            chordRef={chordRef}
             mix={mix}
             onMixChange={(v) => {
               setMix(v);

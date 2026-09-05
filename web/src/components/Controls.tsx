@@ -15,6 +15,8 @@ export function Controls(props: {
   audio: AudioEngine;
   /** Attached to the time clock; updated imperatively by the rAF loop. */
   clockRef: RefObject<HTMLSpanElement | null>;
+  /** Attached to real-time chord display; updated imperatively by the rAF loop. */
+  chordRef?: RefObject<HTMLSpanElement | null>;
   mix: number;
   onMixChange: (v: number) => void;
   stereo: boolean;
@@ -23,7 +25,7 @@ export function Controls(props: {
   following: boolean;
   onToggleFollow: () => void;
 }) {
-  const { audio, clockRef, mix, onMixChange, stereo, onStereoChange, following, onToggleFollow } =
+  const { audio, clockRef, chordRef, mix, onMixChange, stereo, onStereoChange, following, onToggleFollow } =
     props;
   // The transport's state isn't React state (and it can auto-stop at the end),
   // so poll it each frame to keep the toggle button's label in sync.
@@ -177,6 +179,20 @@ export function Controls(props: {
       >
         0.0s
       </span>
+
+      {/* Real-Time Active Chord Display Badge */}
+      <div
+        className="flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/15 px-3 py-1 text-sm font-semibold text-accent shadow-sm backdrop-blur-sm"
+        title="Real-time approximated active chord"
+      >
+        <span className="text-[10px] font-extrabold tracking-widest text-accent-light opacity-80">CHORD</span>
+        <span
+          ref={chordRef}
+          className="min-w-[3rem] text-center font-mono text-base font-extrabold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+        >
+          N.C.
+        </span>
+      </div>
       <label
         className={clsx(
           "ml-auto inline-flex items-center gap-2.5 text-sm text-muted max-[760px]:ml-0",
