@@ -7,6 +7,8 @@ services:
     restart: always
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - /home/rtroiano/.cache/huggingface:/root/.cache/huggingface
     ports:
       - "8222:8222"
     networks:
