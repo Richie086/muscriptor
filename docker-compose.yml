@@ -19,7 +19,8 @@ services:
       - "traefik.http.routers.muscriptor.rule=Host(`muscriptor.exit-code.net`)"
       - "traefik.http.routers.muscriptor.entrypoints=websecure"
       - "traefik.http.routers.muscriptor.tls=true"
-      - "traefik.http.routers.muscriptor.tls.certresolver=httpresolver"
+      - "traefik.http.routers.muscriptor.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.muscriptor.tls.domains[0].main=muscriptor.exit-code.net"
       - "traefik.http.services.muscriptor.loadbalancer.server.port=8222"
 
 networks:
