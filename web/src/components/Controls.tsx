@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import clsx from "clsx";
 import type { AudioEngine } from "../audio";
+import type { AccompanimentStyle } from "../drumGenerator";
 import { Button } from "./Button";
 import {
   IconPlay,
@@ -44,6 +45,7 @@ export function Controls(props: {
   // so poll it each frame to keep the toggle button's label in sync.
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [accompaniment, setAccompaniment] = useState<AccompanimentStyle>(() => audio.getAccompaniment());
 
   useEffect(() => {
     let raf = 0;
@@ -59,6 +61,14 @@ export function Controls(props: {
   const handleStart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.blur();
     audio.seek(0);
+  };
+
+  const handleToggleAccompaniment = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
+    const nextMode: AccompanimentStyle =
+      accompaniment === "off" ? "rock" : accompaniment === "rock" ? "click" : "off";
+    setAccompaniment(nextMode);
+    audio.setAccompaniment(nextMode);
   };
 
   const handleReverse = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -176,6 +186,19 @@ export function Controls(props: {
         }}
       >
         Follow playhead
+      </Button>
+      <Button
+        className={clsx(
+          "text-content transition-all",
+          accompaniment === "rock" && "border-amber-500/60 bg-amber-500/15 text-amber-300 shadow-sm font-semibold",
+          accompaniment === "click" && "border-cyan-500/60 bg-cyan-500/15 text-cyan-300 shadow-sm font-semibold",
+        )}
+        title="Toggle Rhythm Accompaniment (Off -> 🥁 Rock Beat -> ⏱️ Click Track)"
+        onClick={handleToggleAccompaniment}
+      >
+        {accompaniment === "off" && "🥁 Drums: Off"}
+        {accompaniment === "rock" && "🥁 Rock Beat"}
+        {accompaniment === "click" && "⏱️ Click Track"}
       </Button>
       <Button
         className={clsx(

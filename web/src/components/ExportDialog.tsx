@@ -5,6 +5,7 @@ import { track } from "../analytics";
 import type { TranscriptionResult } from "../hooks/useTranscription";
 import type { RollNote } from "../pianoroll";
 import { createMidiFile } from "../midiEncoder";
+import { generateDrumTrack } from "../drumGenerator";
 import { zipSync } from "fflate";
 
 export function ExportDialog(props: {
@@ -91,6 +92,16 @@ export function ExportDialog(props: {
     saveBlob(blob, `${stem}_${inst}.mid`);
   }
 
+  function handleDownloadDrumsMidi(style: "rock" | "click" = "rock") {
+    track("download", { format: "midi_drums", style });
+    const maxEnd = notes.length > 0 ? Math.max(...notes.map((n) => n.end)) : 0;
+    const dur = maxEnd > 0 ? maxEnd : 10;
+    const drumNotes = generateDrumTrack(result.beatGrid, dur, style);
+    const bpm = result.beatGrid?.bpm ?? 120;
+    const blob = createMidiFile(drumNotes, `MuScriptor ${style === "rock" ? "Rock Drums" : "Click Track"}`, bpm);
+    saveBlob(blob, `${stem}_${style === "rock" ? "rock_drums" : "click_track"}.mid`);
+  }
+
   async function handleDownloadZipBundle() {
     track("download", { format: "all_bundle_zip" });
     setLoadingAudio(true);
@@ -115,6 +126,15 @@ export function ExportDialog(props: {
           zipFiles[`instruments/${inst}.mid`] = new Uint8Array(await instBlob.arrayBuffer());
         }
       }
+
+      // 3b. Rock drum & click track accompaniment MIDIs
+      const maxEnd = notes.length > 0 ? Math.max(...notes.map((n) => n.end)) : 0;
+      const dur = maxEnd > 0 ? maxEnd : 10;
+      const bpm = result.beatGrid?.bpm ?? 120;
+      const rockBlob = createMidiFile(generateDrumTrack(result.beatGrid, dur, "rock"), "MuScriptor Rock Drums", bpm);
+      zipFiles[`accompaniment/${stem}_rock_drums.mid`] = new Uint8Array(await rockBlob.arrayBuffer());
+      const clickBlob = createMidiFile(generateDrumTrack(result.beatGrid, dur, "click"), "MuScriptor Click Track", bpm);
+      zipFiles[`accompaniment/${stem}_click_track.mid`] = new Uint8Array(await clickBlob.arrayBuffer());
 
       // 4. Source audio if present
       if (currentFile) {
@@ -290,6 +310,33 @@ export function ExportDialog(props: {
                 </div>
               </div>
             )}
+
+            {/* Rhythm & Click Accompaniment Stems */}
+            <div className="mt-3 pt-3 border-t border-line/50">
+              <span className="block text-[11px] font-medium text-muted mb-2">
+                🥁 Rhythm & Click Accompaniment Stems (GM Channel 10):
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  kind="ghost"
+                  pad="px-2.5 py-1"
+                  className="text-xs rounded border border-amber-500/40 hover:border-amber-400 text-amber-300 flex items-center gap-1.5"
+                  onClick={() => handleDownloadDrumsMidi("rock")}
+                >
+                  <IconDownload />
+                  <span>Rock Drum Groove (Kick 1&3, Snare 2&4)</span>
+                </Button>
+                <Button
+                  kind="ghost"
+                  pad="px-2.5 py-1"
+                  className="text-xs rounded border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 flex items-center gap-1.5"
+                  onClick={() => handleDownloadDrumsMidi("click")}
+                >
+                  <IconDownload />
+                  <span>Metronome Click Track</span>
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Audio Files */}
