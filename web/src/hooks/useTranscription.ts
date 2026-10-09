@@ -50,6 +50,8 @@ export type TranscriptionResult = {
   quantizedMidi: Blob | null;
   /** What to call `midi` when it is saved: the uploaded file's name, as .mid. */
   filename: string;
+  /** Detected beat grid from transcription */
+  beatGrid: BeatGrid | null;
 };
 
 /** Stable id for this browser tab, sent as `X-Client-Id` on every transcribe
@@ -159,6 +161,7 @@ export function useTranscription(deps: TranscriptionDeps) {
     base64: string,
     quantizedBase64: string | null,
     filename: string,
+    beatGrid: BeatGrid | null = null,
   ) {
     const midi = midiBlobOf(base64);
     if (midiUrlRef.current !== null) URL.revokeObjectURL(midiUrlRef.current);
@@ -169,6 +172,7 @@ export function useTranscription(deps: TranscriptionDeps) {
       midi,
       quantizedMidi: quantizedBase64 ? midiBlobOf(quantizedBase64) : null,
       filename,
+      beatGrid,
     });
   }
 
@@ -263,13 +267,14 @@ export function useTranscription(deps: TranscriptionDeps) {
         const ev = raw as StreamedEvent;
         if (ev.type === "transcription_complete") {
           // Final event: the assembled MIDI file. Enables the download button.
-          setMidi(ev.data, ev.quantized_midi, midiFilename);
+          beatGrid = ev.beat_grid ?? null;
+          setMidi(ev.data, ev.quantized_midi, midiFilename, beatGrid);
           // Tempo came with it — redraw the time grid as bars instead of seconds,
           // and move the notes onto the beats (the MIDI above already has them
           // there), in the roll and in the scheduled playback alike.
-          beatGrid = ev.beat_grid ?? null;
           rollRef.current?.setBeatGrid(beatGrid);
           audio.shiftNotes(-(beatGrid?.onset_delay ?? 0));
+          audio.setBeatGrid(beatGrid);
           continue;
         }
         if (ev.type === "progress") {

@@ -2,6 +2,8 @@
 
 import dataclasses
 
+from typing import Literal
+
 from muscriptor.tokenizer.notes import (
     Note,
     note2note_event,
@@ -9,6 +11,7 @@ from muscriptor.tokenizer.notes import (
     trim_overlapping_notes,
 )
 from muscriptor.utils.beats import BeatGrid
+from muscriptor.utils.drums import generate_rock_beat
 
 # Written when no grid was detected: 120 BPM and no time signature, leaving the
 # meter for notation software to guess.
@@ -33,6 +36,7 @@ def notes_to_midi(
     program_names: dict[int, str] | None = None,
     beat_grid: BeatGrid | None = None,
     quantize: bool = False,
+    drum_accompaniment: Literal["rock", "click"] | None = None,
 ):
     """Convert a list of Note objects to a mido MidiFile.
 
@@ -59,6 +63,15 @@ def notes_to_midi(
     if quantize and beat_grid.beat_subdivision is not None:
         step = 60.0 / beat_grid.bpm / beat_grid.beat_subdivision
         notes = quantized_notes(notes, step, offset)
+
+    if drum_accompaniment and notes:
+        total_duration = max(n.offset for n in notes)
+        drum_notes = generate_rock_beat(
+            beat_grid=beat_grid,
+            total_duration=total_duration,
+            style=drum_accompaniment,
+        )
+        notes = list(notes) + drum_notes
 
     return note_event2midi(
         note2note_event(notes),
